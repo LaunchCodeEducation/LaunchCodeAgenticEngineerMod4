@@ -1,6 +1,6 @@
 from pathlib import Path
 import re
-
+import json
 
 ROOT = Path(".")
 
@@ -50,3 +50,42 @@ def test_policy_gate_is_not_continue_on_error():
     assert "continue-on-error: true" not in section, (
         "policy-gate must remain a real gate, not advisory."
     )
+def test_documentation_writer_policy_matches_enforcement():
+    policy = (ROOT / "docs" / "governance-policy.md").read_text(encoding="utf-8")
+
+    storage = json.loads(
+        (ROOT / "mcp-servers" / "storage" / "allow-list.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    retrieval = json.loads(
+        (ROOT / "mcp-servers" / "retrieval" / "allow-list.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    startup = (ROOT / "scripts" / "run-agent.ps1").read_text(encoding="utf-8")
+
+    role = "documentation-writer"
+
+    # Policy entry exists and records the intended container permissions.
+    assert "## Role: documentation-writer" in policy
+    assert "**Maximum level:** internal" in policy
+    assert "**Container permissions:** workspace read-only, memory omitted" in policy
+
+    # Storage grants match the policy.
+    assert role in storage["read_entry"]
+    assert role in storage["list_entries"]
+    assert role not in storage["write_entry"]
+    assert role not in storage["update_entry"]
+    assert role not in storage["delete_entry"]
+    assert role not in storage["audit_read"]
+
+    # Retrieval grant and classification ceiling match the policy.
+    assert retrieval["retrieve"][role]["granted"] is True
+    assert retrieval["retrieve"][role]["classification_ceiling"] == "internal"
+
+    # Startup script recognizes the role as a governed read-only role.
+    assert "documentation-writer" in startup
+    assert "'reviewer', 'tester', 'project-manager', 'documentation-writer'" in startup

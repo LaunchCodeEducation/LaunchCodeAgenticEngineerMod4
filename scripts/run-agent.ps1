@@ -2,8 +2,7 @@
 # governance policy allows. Pass the role name as the first argument.
 #
 # Usage: .\scripts\run-agent.ps1 <role-name> [command...]
-# Roles: implementer, orchestrator, reviewer, tester, project-manager
-
+# Roles: implementer, orchestrator, reviewer, tester, project-manager, documentation-writer
 param(
     [Parameter(Mandatory = $true, Position = 0)]
     [string]$Role,
@@ -14,7 +13,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$Image = if ($env:AGENT_IMAGE) { $env:AGENT_IMAGE } else { 'launchcode-agentic:module4' }
+$Image = if ($env:AGENT_IMAGE) { $env:AGENT_IMAGE } else { 'agentic_engineer_4:latest' }
 $WorkspaceMode = 'ro'
 $MountMemory = $false
 
@@ -23,7 +22,8 @@ switch ($Role) {
         $WorkspaceMode = 'rw'
         $MountMemory = $true
     }
-    { $_ -in 'reviewer', 'tester', 'project-manager' } {
+    { $_ -in 'reviewer', 'tester', 'project-manager', 'documentation-writer' } 
+{
         $WorkspaceMode = 'ro'
         $MountMemory = $false
     }

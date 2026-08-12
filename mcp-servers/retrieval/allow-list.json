@@ -16,6 +16,10 @@
       "granted": true,
       "classification_ceiling": "confidential"
     },
+"documentation-writer": {
+  "granted": true,
+  "classification_ceiling": "internal"
+},
     "project-manager": {
       "granted": false,
       "denial_reason": "project-manager does not perform retrieval"

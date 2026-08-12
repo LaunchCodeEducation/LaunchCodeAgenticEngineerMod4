@@ -202,6 +202,42 @@ To widen access, open a pull request with: the proposed grant, a concrete justif
 **Conditions for human checkpoint:** Before destructive operations, external publication, or any action outside the protected workflow.  
 **Reason:** Orchestration is reversible within the container, but lifecycle and publication actions need human accountability.  
 **Container permissions:** workspace read-write, memory mounted
+## Role: documentation-writer
+
+**Version:** v1.0.0
+**Defined in:** `agents/documentation-writer.md`
+
+### MCP server and operation access
+
+| Operation | Server | Granted | Justification / Denial reason |
+|---|---|---|---|
+| read_entry | storage | YES | Documentation-writer reads project state for accurate documentation. |
+| list_entries | storage | YES | Documentation-writer checks available project state before documenting it. |
+| write_entry | storage | NO | Documentation-writer must not change stored project state; its job is documentation only. |
+| update_entry | storage | NO | Documentation-writer must not alter existing project state under least privilege. |
+| delete_entry | storage | NO | Documentation-writer must not remove project state; delete access could cause loss of information the role is only meant to describe. |
+| audit_read | storage | NO | Audit inspection is owned by the orchestrator and is not required for documentation work. |
+| retrieve | retrieval | YES | Documentation-writer retrieves approved reference documents needed for documentation. |
+
+### Skill activation scope
+
+| Skill | Activation permitted | Reason if denied |
+|---|---|---|
+| run-tests | NO | Documentation work does not require test execution, and running tests can change workspace state. |
+| draft-pr-description | NO | Pull-request descriptions are owned by the project-manager role. |
+| summarize-session | YES | Documentation-writer may summarize its own documentation work. |
+
+### Data classification ceiling
+
+**Maximum level:** internal
+**Reason:** Documentation-writer may need internal project references but does not require confidential data.
+
+### Autonomy level
+
+**Level:** low
+**Conditions for human checkpoint:** Before publishing documentation externally, changing repository state, or requesting access above the internal classification ceiling.
+**Reason:** Documentation output should remain advisory and reviewable before it affects project state or external audiences.
+**Container permissions:** workspace read-only, memory omitted
 
 ## Deterministic conversion history
 
