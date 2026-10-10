@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 import yaml
 
-GATING_JOBS = {"policy-gate", "eval-gate", "pipeline-integrity"}
+GATING_JOBS = {"policy-gate", "governed-file-gate", "pipeline-integrity"}
 WORKFLOW = Path(".github/workflows/ci.yml")
 
 with open(WORKFLOW, encoding="utf-8") as f:

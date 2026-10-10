@@ -77,6 +77,17 @@ jobs:
           retention-days: 90
           if-no-files-found: ignore
 
+  test:
+   name: Test Suite
+   needs: policy-gate
+   runs-on: ubuntu-latest
+   steps:
+     - uses: actions/checkout@v4
+     # ...the rest of the baseline job from Section 1        
+
+    
+  
+
   governed-file-gate:
     name: Governed File Check
     runs-on: ubuntu-latest
@@ -131,7 +142,7 @@ jobs:
             -v "$GITHUB_WORKSPACE":/workspace:ro \
             -v "$GITHUB_WORKSPACE/ci-out":/out \
             -w /workspace \
-            -e ANTHROPIC_API_KEY \
+            -e OPENROUTER_API_KEY \
             -e CHANGED_FILES="${{ needs.change-type-check.outputs.changed-files }}" \
             agentic_engineer_4 \
             python scripts/run-reviewer.py
@@ -146,6 +157,38 @@ jobs:
           path: ci-artifacts/
           retention-days: 90
           if-no-files-found: ignore
+
+
+  pipeline-integrity:
+    name: Pipeline Integrity Check
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+ 
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+ 
+      - name: Install PyYAML
+        run: pip install pyyaml
+ 
+      - name: Check pipeline integrity
+        run: |
+          mkdir -p ci-artifacts
+          python scripts/check-pipeline-integrity.py > ci-artifacts/pipeline-integrity-report.txt 2>&1 || EXIT=$?
+          cat ci-artifacts/pipeline-integrity-report.txt
+          exit ${EXIT:-0}
+
+      - name: Upload pipeline-integrity report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-integrity-report
+          path: ci-artifacts/pipeline-integrity-report.txt
+          retention-days: 90
+          if-no-files-found: ignore
+
 
   audit-trail:
     name: Audit Trail

@@ -19,6 +19,14 @@
     "project-manager": {
       "granted": false,
       "denial_reason": "project-manager does not perform retrieval"
+    },
+    "planner": {
+      "granted": true,
+      "classification_ceiling": "internal"
+    },
+    "dependency-auditor": {
+      "granted": true,
+      "classification_ceiling": "internal"
     }
   }
 }

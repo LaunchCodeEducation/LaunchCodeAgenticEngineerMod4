@@ -222,3 +222,22 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+
+
+# --- Agentic harness: commit only the reference corpus from .memory ---
+.memory/*
+!.memory/reference/
+!.memory/reference/**
+
+# Runtime audit logs from MCP servers
+/logs/
+
+# Node dependencies
+**/node_modules/
+
+# Target app source — lives in its own repo; keep out of the harness repo
+/appointment-backend/
+/appointment-frontend/
+.claude/
+*.bak

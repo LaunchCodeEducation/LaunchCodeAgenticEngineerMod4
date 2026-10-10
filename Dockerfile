@@ -107,7 +107,6 @@ COPY docs/ /workspace/docs/
 COPY eval/ /workspace/eval/
 COPY schemas/ /workspace/schemas/
 COPY examples/ /workspace/examples/
-COPY example-task-app/ /workspace/example-task-app/
 COPY CLAUDE.md /workspace/CLAUDE.md
 
 # --- Workspace directory structure for Module 4 ---

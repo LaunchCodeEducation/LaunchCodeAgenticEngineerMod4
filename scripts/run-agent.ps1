@@ -14,7 +14,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$Image = if ($env:AGENT_IMAGE) { $env:AGENT_IMAGE } else { 'launchcode-agentic:module4' }
+$Image = if ($env:AGENT_IMAGE) { $env:AGENT_IMAGE } else { 'agentic_engineer_4' }
 $WorkspaceMode = 'ro'
 $MountMemory = $false
 
@@ -23,7 +23,7 @@ switch ($Role) {
         $WorkspaceMode = 'rw'
         $MountMemory = $true
     }
-    { $_ -in 'reviewer', 'tester', 'project-manager' } {
+    { $_ -in 'planner', 'reviewer', 'tester', 'project-manager', 'dependency-auditor' } {
         $WorkspaceMode = 'ro'
         $MountMemory = $false
     }

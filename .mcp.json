@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "storage": {
+      "type": "http",
+      "url": "http://localhost:8001/mcp"
+    },
+    "retrieval": {
+      "type": "http",
+      "url": "http://localhost:8002/mcp"
+    }
+  }
+}
