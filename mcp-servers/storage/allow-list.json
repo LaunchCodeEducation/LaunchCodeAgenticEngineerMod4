@@ -3,6 +3,6 @@
   "read_entry": ["implementer", "security-reviewer", "tester", "project-manager", "orchestrator"],
   "list_entries": ["implementer", "security-reviewer", "tester", "project-manager", "orchestrator"],
   "update_entry": ["implementer", "orchestrator"],
-  "delete_entry": ["orchestrator"],
+  "delete_entry": ["orchestrator", "implementer"],
   "audit_read": ["orchestrator"]
 }
