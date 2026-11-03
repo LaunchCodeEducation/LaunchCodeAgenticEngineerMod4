@@ -1,0 +1,48 @@
+{
+  "title": "MarketRadar Unit-Test Summary Quality Rubric",
+  "source": "Adapted from eval/rubric.json (lint) for the unit-test regression profile. Same scale and thresholds.",
+  "scale": {
+    "min": 1,
+    "max": 4
+  },
+  "overall_pass_threshold": 9,
+  "require_each_dimension_to_pass": true,
+  "dimensions": [
+    {
+      "id": "test_result_accuracy",
+      "name": "Test Result Accuracy",
+      "description": "Does the summary correctly report whether the test suite passed or failed and accurately connect that claim to the recorded command result?",
+      "pass_threshold": 3,
+      "levels": {
+        "1": "Incorrectly reports test success or failure.",
+        "2": "Mentions the test outcome ambiguously or incompletely.",
+        "3": "Clearly and correctly reports test pass/fail.",
+        "4": "Correct outcome supported by the specific command, counts and exit status."
+      }
+    },
+    {
+      "id": "test_coverage_reporting",
+      "name": "Test and Failure Coverage",
+      "description": "Does the summary report the test files, test counts and every failing test from the recorded output, without omissions or invented results?",
+      "pass_threshold": 3,
+      "levels": {
+        "1": "Misses failures or invents results.",
+        "2": "Reports some counts or failures but omits significant ones.",
+        "3": "Reports file and test counts and all failures evidenced by the output.",
+        "4": "Complete, per-file reporting that ties the tests to the task under regression."
+      }
+    },
+    {
+      "id": "recommendation_quality",
+      "name": "Recommendation Quality",
+      "description": "Is the recommended next step appropriate, actionable, and proportionate to the recorded test findings?",
+      "pass_threshold": 3,
+      "levels": {
+        "1": "Recommends proceeding despite failing tests without acknowledging risk.",
+        "2": "Offers vague advice disconnected from specific findings.",
+        "3": "Recommends an appropriate next action consistent with the results.",
+        "4": "Provides clear, ordered, actionable next steps consistent with the evidence."
+      }
+    }
+  ]
+}

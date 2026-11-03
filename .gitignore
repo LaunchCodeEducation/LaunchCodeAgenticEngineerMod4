@@ -222,3 +222,21 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- MarketRadar (Module 3 → Module 4.1 migration) ---
+# Node.js dependencies and build outputs
+node_modules/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Facebook Marketplace session state (secret; never commit)
+tracker-api/storage/facebook-state.json
+
+# The Python template above ignores every `lib/` directory, which would
+# silently drop MarketRadar TypeScript source. Re-include those paths.
+!tracker-api/src/lib/
+!tracker-client/src/lib/

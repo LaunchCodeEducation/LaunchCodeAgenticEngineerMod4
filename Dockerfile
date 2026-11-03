@@ -82,6 +82,14 @@ RUN node --version && \
     (claude --version 2>/dev/null || claude version 2>/dev/null || echo "claude installed (no --version flag)") && \
     (opencode --version 2>/dev/null || opencode version 2>/dev/null || echo "opencode installed (no --version flag)")
 
+# MarketRadar (tracker-client) uses Vite 8, which requires Node.js >= 20.19.
+# The apt `nodejs` package depends on the Debian release behind python:3.12-slim,
+# so fail the build fast if the installed Node is too old.
+RUN node -e "const [maj,min]=process.versions.node.split('.').map(Number); \
+if (maj < 20 || (maj === 20 && min < 19)) { \
+  console.error('Node.js ' + process.versions.node + ' found; MarketRadar requires >= 20.19'); process.exit(1); } \
+console.log('Node.js ' + process.versions.node + ' satisfies MarketRadar requirement (>= 20.19)');"
+
 # --- ngrok ---
 RUN curl -sSL https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
     | tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null \

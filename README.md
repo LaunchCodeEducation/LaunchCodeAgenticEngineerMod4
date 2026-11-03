@@ -10,6 +10,7 @@ Docker development environment for LaunchCode's **Agentic Programming** course, 
 - **Gmail MCP server** — lets Claude Code prompts read and send email
 - **Pre-configured skills** — custom slash commands available inside Claude Code
 - **Pre-configured agents** — autonomous sub-agents Claude Code can invoke for specialized tasks
+- **MarketRadar project** — the Module 3 Facebook Marketplace tracker and its evaluation harness, migrated in Module 4.1 (see [MarketRadar](#marketradar-migrated-from-module-3))
 
 ## Quick Start
 
@@ -49,6 +50,32 @@ docker run -it --rm \
 ```
 
 Place `credentials.json` (from Google Cloud Console) in `$PWD` before running. The Gmail MCP will trigger OAuth on first use and persist the token in `~/.gmail-mcp/`.
+
+## MarketRadar (migrated from Module 3)
+
+MarketRadar is a Facebook Marketplace tracker. It was migrated into this environment in Module 4.1. The original Module 3 README is preserved at [`docs/module3/README.md`](docs/module3/README.md).
+
+| Path | Contents |
+|---|---|
+| `tracker-api/` | Express + TypeScript + Prisma backend |
+| `tracker-client/` | React + Vite + Tailwind frontend |
+| `.claude/agents/` | Module 3 subagents (`planner`, `implementer`, `tester`, `project-manager`, `marketradar-code-reviewer`) |
+| `.memory/` | Layered project memory |
+| `eval/module3/` | Module 3.3 evaluation harness and recorded evidence |
+| `docs/module3/` | Module 3 documentation; see `migration-notes.md` for known issues |
+
+**Requires Node.js >= 20.19** (Vite 8). The image build fails if the installed Node is older.
+
+```bash
+# Backend (Vitest suite; Prisma is mocked, no database needed)
+cd tracker-api && npm ci && npm test
+
+# Frontend
+cd tracker-client && npm ci && npm run lint && npm run build
+
+# Module 3 evaluation harness offline self-test (run from eval/module3)
+cd eval/module3 && python3 -m unittest test_harness_selftest -v
+```
 
 ## Build
 

@@ -1,0 +1,15 @@
+{
+  "run_id": "CAL-REGRESSION-DISTINCT-002",
+  "kind": "real_development_run",
+  "profile": "unit-tests",
+  "task_description": "Final scoped regression (attempt 2) for the Module 3.1 saved-search maxPrice validation task: run the tracker-api Vitest suite (cd tracker-api && npm run test) and report pass/fail, test file and test counts, any failing tests, and a recommendation without modifying files. Historical baseline (documentation only): docs/iteration-log.md, Module 3.1 Run 1, Tester PASS 15/15.",
+  "expected_roles": [
+    "tester"
+  ],
+  "executions": [
+    {
+      "role": "tester",
+      "transcript": "distinct-regression-2-tester.jsonl"
+    }
+  ]
+}

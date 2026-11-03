@@ -1,0 +1,66 @@
+{
+  "title": "MarketRadar Module 1 Lint Summary Quality Rubric",
+  "source": "docs/rubric.md",
+  "scale": {
+    "min": 1,
+    "max": 4
+  },
+  "overall_pass_threshold": 9,
+  "require_each_dimension_to_pass": true,
+  "dimensions": [
+    {
+      "id": "lint_result_accuracy",
+      "name": "Lint Result Accuracy",
+      "description": "Does the summary correctly report whether the lint command passed or failed and accurately connect that claim to the recorded command result?",
+      "pass_threshold": 3,
+      "levels": {
+        "1": "Incorrectly reports lint success or failure.",
+        "2": "Mentions lint outcome ambiguously or incompletely.",
+        "3": "Clearly and correctly reports lint pass/fail.",
+        "4": "Correct outcome supported by specific command and result evidence."
+      },
+      "examples": {
+        "1": "Says lint passed when the command exited nonzero.",
+        "2": "Says 'There were some issues' without stating pass or fail.",
+        "3": "Says 'Lint failed' when the recorded command failed.",
+        "4": "Says 'npm run lint failed (exit 1)' and cites the relevant output."
+      }
+    },
+    {
+      "id": "error_warning_coverage",
+      "name": "Error and Warning Coverage",
+      "description": "Does the summary cover significant errors and warnings in the recorded lint output without omissions or invented issues?",
+      "pass_threshold": 3,
+      "levels": {
+        "1": "Misses major errors or warnings or invents success.",
+        "2": "Mentions some issues but omits significant others.",
+        "3": "Covers all important errors and warnings evidenced by the command output.",
+        "4": "Comprehensive coverage, grouped or prioritized for easy review."
+      },
+      "examples": {
+        "1": "Claims no errors although ESLint reported multiple errors.",
+        "2": "Mentions one warning but ignores two errors.",
+        "3": "Lists each important ESLint error and warning.",
+        "4": "Separates errors from warnings and highlights blocking errors first."
+      }
+    },
+    {
+      "id": "recommendation_quality",
+      "name": "Recommendation Quality",
+      "description": "Is the recommended next step appropriate, actionable, and proportionate to the recorded lint findings?",
+      "pass_threshold": 3,
+      "levels": {
+        "1": "Recommends proceeding despite failing lint without acknowledging risk.",
+        "2": "Offers vague advice disconnected from specific findings.",
+        "3": "Recommends an appropriate next action consistent with the results.",
+        "4": "Provides clear, ordered, actionable next steps and a re-verification command."
+      },
+      "examples": {
+        "1": "Says 'deploy now' despite lint errors.",
+        "2": "Says 'look into it.'",
+        "3": "Says 'fix lint errors before continuing.'",
+        "4": "Says 'resolve unused imports, rerun npm run lint, then resume the build.'"
+      }
+    }
+  ]
+}

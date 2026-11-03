@@ -1,0 +1,8 @@
+-- AlterTable
+ALTER TABLE "SavedSearch" ADD COLUMN     "isActive" BOOLEAN NOT NULL DEFAULT true,
+ADD COLUMN     "lastCheckedAt" TIMESTAMP(3),
+ADD COLUMN     "lastNewListings" INTEGER NOT NULL DEFAULT 0,
+ADD COLUMN     "location" TEXT NOT NULL DEFAULT 'Philadelphia',
+ADD COLUMN     "maxPrice" INTEGER,
+ADD COLUMN     "query" TEXT NOT NULL DEFAULT '',
+ADD COLUMN     "radius" INTEGER NOT NULL DEFAULT 65;

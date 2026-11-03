@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model SavedSearch {
+  id                    String    @id @default(uuid()) @db.Uuid
+  name                  String
+  query                 String    @default("")
+  maxPrice              Int?
+  location              String    @default("Philadelphia")
+  radius                Int       @default(65)
+  resultsPerSearch      Int       @default(10)
+  isActive              Boolean   @default(true)
+  lastCheckedAt         DateTime?
+  lastNewListings       Int       @default(0)
+  lastTotalScraped      Int       @default(0)
+  lastSkippedDuplicates Int       @default(0)
+  lastRunNewListingIds  String[]  @default([])
+  createdAt             DateTime  @default(now())
+}
+
+model Listing {
+  id            String   @id @default(uuid()) @db.Uuid
+  source        String
+  listingUrl    String   @unique
+  title         String?
+  price         String?
+  location      String?
+  imageUrl      String?
+  savedSearchId String?  @db.Uuid
+  seenAt        DateTime @default(now())
+
+  priceObservations PriceObservation[]
+}
+
+model PriceObservation {
+  id          String   @id @default(uuid()) @db.Uuid
+  listingId   String   @db.Uuid
+  listing     Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  price       String
+  priceAmount Int?
+  observedAt  DateTime @default(now())
+
+  @@index([listingId, observedAt])
+}

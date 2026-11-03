@@ -1,0 +1,14 @@
+{
+  "run_id": "SYNTHETIC-STRUCTURAL-FIXTURE",
+  "kind": "synthetic_fixture_not_real_run",
+  "task_description": "Summarize existing tracker-client lint result without modifying source files.",
+  "expected_roles": [
+    "tester"
+  ],
+  "executions": [
+    {
+      "role": "tester",
+      "transcript": "synthetic-lint-transcript.jsonl"
+    }
+  ]
+}

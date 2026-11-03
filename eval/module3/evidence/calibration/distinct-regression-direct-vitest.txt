@@ -1,0 +1,20 @@
+# Direct (non-agent) run, 2026-11-02T02:00:50Z
+# cwd: /workspace/marketradar/tracker-api
+# command: npm run test
+# node v20.19.2, npm 9.2.0
+
+> tracker-api@0.0.0 test
+> vitest run
+
+
+ RUN  v3.2.7 /workspace/marketradar/tracker-api
+
+ ✓ tests/store/listings.test.ts (3 tests) 4ms
+ ✓ tests/store/searches.test.ts (12 tests) 8ms
+
+ Test Files  2 passed (2)
+      Tests  15 passed (15)
+   Start at  02:00:50
+   Duration  493ms (transform 162ms, setup 0ms, collect 179ms, tests 13ms, environment 0ms, prepare 152ms)
+
+EXIT_CODE=0

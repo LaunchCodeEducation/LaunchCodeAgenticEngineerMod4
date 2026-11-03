@@ -1,0 +1,47 @@
+{
+  "planner": {
+    "retrieval": [
+      "retrieve"
+    ],
+    "storage": [],
+    "classification_ceiling": "internal"
+  },
+  "implementer": {
+    "retrieval": [
+      "retrieve"
+    ],
+    "storage": [
+      "write_entry"
+    ],
+    "classification_ceiling": "internal"
+  },
+  "code-reviewer": {
+    "retrieval": [
+      "retrieve"
+    ],
+    "storage": [],
+    "classification_ceiling": "internal"
+  },
+  "tester": {
+    "retrieval": [
+      "retrieve"
+    ],
+    "storage": [],
+    "classification_ceiling": "internal"
+  },
+  "verifier": {
+    "retrieval": [],
+    "storage": [
+      "read_entry",
+      "list_entries"
+    ],
+    "classification_ceiling": "internal"
+  },
+  "project_manager": {
+    "retrieval": [],
+    "storage": [
+      "write_entry"
+    ],
+    "classification_ceiling": "internal"
+  }
+}

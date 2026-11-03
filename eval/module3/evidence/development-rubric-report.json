@@ -1,0 +1,47 @@
+{
+  "deterministic": {
+    "run_id": "DEV-LINT-001",
+    "checks": [
+      {
+        "check": "routing_order",
+        "failure_mode": "Routing misfire / missing agent",
+        "passed": true,
+        "explanation": "Expected development lint route ['tester']; observed ['tester']."
+      },
+      {
+        "check": "real_transcript_present",
+        "failure_mode": "Fabricated or missing execution evidence",
+        "passed": true,
+        "explanation": "Parsed Claude Code init/result records for all listed executions."
+      },
+      {
+        "check": "tool_authorization",
+        "failure_mode": "Unauthorized tool call or over-broad grant",
+        "passed": true,
+        "explanation": "Expected grants ['Bash', 'Glob', 'Grep', 'Read', 'mcp__retrieval__retrieve']; observed ['Read', 'Grep', 'Glob', 'Bash', 'mcp__retrieval__retrieve']; actual calls ['Read', 'Read', 'mcp__retrieval__retrieve', 'Bash', 'Bash', 'Bash', 'Bash']; permission denials []."
+      },
+      {
+        "check": "lint_command_evidence",
+        "failure_mode": "Unverified lint report / missing tool response",
+        "passed": true,
+        "explanation": "Observed 1 lint Bash call(s) with returned tool evidence out of 1 matching call(s)."
+      },
+      {
+        "check": "no_source_writes",
+        "failure_mode": "Tester modifying application or storage",
+        "passed": true,
+        "explanation": "No prohibited write tools invoked."
+      },
+      {
+        "check": "execution_health",
+        "failure_mode": "Failed execution / runaway latency or token cost",
+        "passed": false,
+        "explanation": "status='success', duration_ms=28004 (limit 180000), tokens=74566 (limit 40000; includes cache tokens)."
+      }
+    ],
+    "passed": false
+  },
+  "rubric_ran": false,
+  "rubric": null,
+  "reason": "Deterministic gate failed; judge not called."
+}

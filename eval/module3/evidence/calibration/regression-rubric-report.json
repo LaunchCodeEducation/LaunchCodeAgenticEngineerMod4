@@ -1,0 +1,74 @@
+{
+  "deterministic": {
+    "run_id": "CAL-REGRESSION-001",
+    "checks": [
+      {
+        "check": "routing_order",
+        "failure_mode": "Routing misfire / missing agent",
+        "passed": true,
+        "explanation": "Expected development lint route ['tester']; observed ['tester']."
+      },
+      {
+        "check": "real_transcript_present",
+        "failure_mode": "Fabricated or missing execution evidence",
+        "passed": true,
+        "explanation": "Parsed Claude Code init/result records for all listed executions."
+      },
+      {
+        "check": "tool_authorization",
+        "failure_mode": "Unauthorized tool call or over-broad grant",
+        "passed": true,
+        "explanation": "Expected grants ['Bash', 'Glob', 'Grep', 'Read', 'mcp__retrieval__retrieve']; observed ['Read', 'Grep', 'Glob', 'Bash', 'mcp__retrieval__retrieve']; actual calls ['Read', 'Read', 'mcp__retrieval__retrieve', 'Bash', 'Read', 'Read', 'Read']; permission denials []."
+      },
+      {
+        "check": "lint_command_evidence",
+        "failure_mode": "Unverified lint report / missing tool response",
+        "passed": true,
+        "explanation": "Observed 1 lint Bash call(s) with returned tool evidence out of 1 matching call(s)."
+      },
+      {
+        "check": "no_source_writes",
+        "failure_mode": "Tester modifying application or storage",
+        "passed": true,
+        "explanation": "No prohibited write tools invoked."
+      },
+      {
+        "check": "execution_health",
+        "failure_mode": "Failed execution / runaway latency or token cost",
+        "passed": true,
+        "explanation": "status='success', duration_ms=21134 (limit 180000), tokens=39423 (limit 40000; includes cache tokens)."
+      }
+    ],
+    "passed": true
+  },
+  "rubric_ran": true,
+  "rubric": {
+    "scores": [
+      {
+        "dimension": "lint_result_accuracy",
+        "score": 4,
+        "justification": "The summary reports FAIL with 7 errors, 0 warnings and exit code 1. This matches the recorded Bash tool response: '\u2716 7 problems (7 errors, 0 warnings)' followed by 'EXIT_CODE=1'. The command is named (npm run lint in tracker-client), and the output excerpt is a shortened but faithful copy of the real output. The summary also states the failed acceptance criterion directly.",
+        "pass_threshold": 3,
+        "passed": true
+      },
+      {
+        "dimension": "error_warning_coverage",
+        "score": 4,
+        "justification": "All 7 errors in the recorded output are listed with the correct file and line: WatchSettingsDialog.tsx:32, FacebookConnectSheet.tsx:29, AppDataContext.tsx:89 and 189, and FacebookConnectionContext.tsx:19, 23 and 184. The rule IDs are correct. The summary states that there are 0 warnings, which matches the evidence, and it invents no issues. The errors are grouped by rule (3 set-state-in-effect, 4 only-export-components), and the notes on each effect match the code snippets in the output. The summary also says it did not check whether these errors are new, so it cannot call this a regression. That is an honest limit, not a gap in coverage.",
+        "pass_threshold": 3,
+        "passed": true
+      },
+      {
+        "dimension": "recommendation_quality",
+        "score": 4,
+        "justification": "The summary says not to proceed and routes the failure back to the Implementer, with Planner approval if the fix is out of scope. This follows the project's orchestrator workflow. The fix steps are tied to each rule: move the resets into event handlers or use a key to remount, change how AppDataContext loads data, and move hooks and context objects into separate modules. Lowering the rules to warnings is offered as an option that needs a human decision, not as a silent workaround. The summary ends with a re-verification step: re-run npm run lint.",
+        "pass_threshold": 3,
+        "passed": true
+      }
+    ],
+    "total": 12,
+    "maximum": 12,
+    "overall_pass_threshold": 9,
+    "passed": true
+  }
+}

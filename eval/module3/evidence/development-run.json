@@ -1,0 +1,14 @@
+{
+  "run_id": "DEV-LINT-001",
+  "kind": "real_development_run",
+  "task_description": "Run tracker-client npm lint and report results without modifying files.",
+  "expected_roles": [
+    "tester"
+  ],
+  "executions": [
+    {
+      "role": "tester",
+      "transcript": "development-tester.jsonl"
+    }
+  ]
+}
