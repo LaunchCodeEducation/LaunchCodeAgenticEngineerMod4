@@ -24,194 +24,386 @@ To widen access, open a pull request with: the proposed grant,
 a concrete justification, and confirmation that the grant does
 not conflict with any near-miss pattern in the calibration log.
 
-## Role: implementer
+## Scope and evidence
 
-**Version:** v1.0.0  
-**Defined in:** `.agents/implementer.md`
+- **Roles in scope:** the six MarketRadar roles below. They replace the earlier Module 4 sample-role sections, which pointed to `.agents/<role>.md` files that do not exist (`.agents/` contains only `.gitkeep`). Git history keeps the earlier sections.
+- **Runtime role names:** Module 4 servers authorize on the `AGENT_ROLE` environment variable set by `scripts/run-agent.sh` (line 55; read at `mcp-servers/storage/server.py` line 27 and `mcp-servers/retrieval/server.py` line 27). They do not use the `calling_role` an agent declares for itself.
+
+  | Role (this policy) | Agent definition | Module 4 runtime role (`AGENT_ROLE`) | Self-declared `calling_role` |
+  |---|---|---|---|
+  | planner | `.claude/agents/planner.md` | none: `run-agent.sh` rejects it (lines 22–26; D1) | `planner` |
+  | implementer | `.claude/agents/implementer.md` | `implementer` | `implementer` |
+  | tester | `.claude/agents/tester.md` | `tester` | `tester` |
+  | marketradar-code-reviewer | `.claude/agents/marketradar-code-reviewer.md` | `reviewer` | `code-reviewer` |
+  | project-manager | `.claude/agents/project-manager.md` | `project-manager` | `project_manager` |
+  | orchestrator | `CLAUDE.md` "Orchestrator Workflow" (no agent file) | `orchestrator` | n/a |
+
+- **MCP servers in scope:**
+  - `mcp-servers/storage`, with operations `write_entry`, `read_entry`, `list_entries`, `update_entry`, `delete_entry` and `audit_read`. All six are implemented in `server.py` (lines 71–124).
+  - `mcp-servers/retrieval`, with operation `retrieve` (`server.py` lines 73–91).
+  - `mcp/` is Module 3 reference material only and is not wired in (`docs/module3/migration-notes.md` §1, line 18).
+  - The image-level `slack` and `gmail` MCP servers are denied to every MarketRadar role.
+- **Evidence:**
+  - `docs/module3/calibration-log.md` records no near-miss patterns (`docs/module3/governance-risk-notes.md`, "Near-miss section status", lines 6–10). The preamble's pull-request check is therefore applied against findings B1–B5 in those risk notes.
+  - No near-miss is claimed for MarketRadar.
+  - The near-miss patterns in `docs/calibration-log.md` are Module 4 template material, not MarketRadar evidence, and are not cited here.
+- **Status:** these entries state policy intent. Grants are not yet enforced; see Deferred enforcement work. Today:
+  - the `mcp__storage__*` and `mcp__retrieval__*` tools named in `.claude/agents/*.md` are not connected to any configured MCP server. Only `slack` and `gmail` are configured, in the `/workspace` project entry of `/root/.claude.json`.
+  - no subagent holds the Skill tool.
+  - `run-tests` and `draft-pr-description` have no skill definitions. `skills/` defines only `check-gmail`, `rebuild-and-deploy`, `send-email`, `send-slack-message` and `summarize-session`.
+- **Basis legend:**
+  - **[B#]:** finding B1–B5 in `docs/module3/governance-risk-notes.md`.
+  - **[LP]:** least-privilege default (preamble). The role has no task that needs the access.
+  - **[Def]:** the role's agent definition or `CLAUDE.md`.
+- **Changelog:** v1.1.0 (2026-11-04): per-role entries replaced with the MarketRadar roles; preamble unchanged from v1.0.0.
+
+### Documentation reconciliation notes
+
+1. **Autonomy ratings differ from the Module 3 map.** The Module 3 routing map (`docs/module3/routing-and-tool-grant-map.md` lines 5 and 7–8) rates autonomy as "High within planning scope", "High within verification scope" and "High for routing". Those ratings describe freedom *within* a role's scope. This policy instead rates what a role can effect without a human, which gives Planner low, Tester low and Orchestrator medium.
+2. **The standard sequence omits two active roles.** The `CLAUDE.md` / Module 3 sequence (Planner → Implementer → Tester; `CLAUDE.md` lines 206–216) leaves out the Reviewer and the Project Manager. Both are active roles that are used outside that sequence (cf. the HO-02 conflict, `docs/module3/calibration-log.md` line 360). Where they belong in the routing map is still to be decided.
+
+## Role: planner
+
+**Version:** v1.1.0  
+**Defined in:** `.claude/agents/planner.md`  
+**Module 4 runtime role:** none. `scripts/run-agent.sh` rejects `planner` (lines 22–26) and neither allow-list names it (D1).
 
 ### MCP server and operation access
 
-| Operation | Server | Granted | Justification / Denial reason |
-|---|---|---|---|
-| write_entry | storage | YES | Implementer must record decisions. |
-| read_entry | storage | YES | Implementer reads prior decisions. |
-| list_entries | storage | YES | Implementer checks existing state. |
-| update_entry | storage | YES | Implementer updates state after changes. |
-| delete_entry | storage | NO | Implementer must not remove project state (calibration-log.md, near-miss: implementer over-broad delete grant). |
-| audit_read | storage | NO | Audit inspection is owned by the orchestrator. |
-| retrieve | retrieval | YES | Implementer retrieves reference documents for implementation context. |
+| Operation | Server | Granted | Justification / Denial reason | Basis |
+|---|---|---|---|---|
+| write_entry | storage | NO | The plan is returned to the Orchestrator (`planner.md` line 51); nothing needs to be recorded. | [LP] |
+| read_entry | storage | NO | Prior lessons arrive through retrieval, not stored entries. | [LP] |
+| list_entries | storage | NO | No planning step enumerates stored entries. | [LP] |
+| update_entry | storage | NO | The Planner must not change project state (`planner.md` line 22). | [LP] [Def] |
+| delete_entry | storage | NO | The Planner must not delete anything (`planner.md` line 22). | [LP] [Def] |
+| audit_read | storage | NO | Audit inspection is owned by the Orchestrator, the only role granted audit access. | [LP] |
+| retrieve | retrieval | YES | The definition requires lesson retrieval from `proj-lessons` at `internal` (`planner.md` lines 15–18). Not effective today: plan mode denied all 5 HO-01 calls (`calibration-log.md` lines 287 and 302). | [Def] [B5] |
 
 ### Skill activation scope
 
-| Skill | Activation permitted | Reason if denied |
+| Skill | Activation permitted | Reason / Basis |
 |---|---|---|
-| run-tests | YES | Core implementer responsibility. |
-| draft-pr-description | NO | Owned by project-manager role. |
-| summarize-session | YES | Implementer may summarize its own work. |
+| run-tests | NO | The definition says "Do not run tests" (`planner.md` line 24). [Def] |
+| draft-pr-description | NO | The plan is the Planner's only output. [LP] |
+| summarize-session | NO | The plan is the Planner's only output; there is no session summary to produce. [LP] |
+| check-gmail | NO | No MarketRadar use, and it brings external personal data into context. [LP] |
+| send-email | NO | No MarketRadar use; external publication. [LP] |
+| send-slack-message | NO | No MarketRadar use; external publication. [LP] |
+| rebuild-and-deploy | NO | No MarketRadar use; pushes an image to DockerHub. [LP] |
+
+The Planner subagent does not hold the Skill tool (`planner.md` line 4).
 
 ### Data classification ceiling
 
 **Maximum level:** internal  
-**Reason:** Implementer does not require confidential data to perform implementation tasks.
-
-### Autonomy level
-
-**Level:** medium  
-**Conditions for human checkpoint:** Before running shell commands outside the test suite; before writing to any file outside the current feature branch scope.  
-**Reason:** Implementation is reversible within the container; shell commands outside the test suite are higher risk.  
-**Container permissions:** workspace read-write, memory mounted
-
-## Role: reviewer
-
-**Version:** v1.0.0  
-**Defined in:** `.agents/reviewer.md`
-
-### MCP server and operation access
-
-| Operation | Server | Granted | Justification / Denial reason |
-|---|---|---|---|
-| read_entry | storage | YES | Reviewer reads decisions to review them. |
-| list_entries | storage | YES | Reviewer checks what exists before reviewing. |
-| write_entry | storage | NO | Reviewer must not change project state. |
-| update_entry | storage | NO | Reviewer must not change project state. |
-| delete_entry | storage | NO | Reviewer must not remove project state. |
-| audit_read | storage | NO | Audit inspection is owned by the orchestrator. |
-| retrieve | retrieval | YES | Reviewer retrieves reference documents for context. |
-
-### Skill activation scope
-
-| Skill | Activation permitted | Reason if denied |
-|---|---|---|
-| run-tests | NO | Reviewer is read-only; running tests changes workspace state (calibration-log.md, near-miss: reviewer near-triggered run-tests). |
-| draft-pr-description | NO | Owned by project-manager role. |
-| summarize-session | YES | Reviewer may summarize its own review. |
-
-### Data classification ceiling
-
-**Maximum level:** internal  
-**Reason:** Reviewer does not require confidential data to review internal work.
+**Reason:** The definition passes `classification_ceiling: internal` (`planner.md` line 17). The lessons planning needs are classified `internal`. Among the `.memory/reference/lesson-*.md` files, only `lesson-session-data-security.md` is `confidential`; `.memory/reference/lessons-ground-truth.md` carries no `classification:` field.
 
 ### Autonomy level
 
 **Level:** low  
-**Conditions for human checkpoint:** Reviewer output is advisory only; it may not apply any change. Any action beyond producing review findings requires escalation to the orchestrator.  
-**Reason:** A review role that can change state can quietly alter the work it is supposed to inspect independently.  
-**Container permissions:** workspace read-only, memory omitted
+**Conditions for human checkpoint:** The plan has no effect until a human approves it (`CLAUDE.md` "Human Checkpoints", line 236; `planner.md` line 53).  
+**Reason:** The Planner only proposes. All effect is gated by human approval.  
+**Container permissions:** not launchable through `scripts/run-agent.sh` (D1). The intended setting is workspace read-only, memory omitted.
+
+### Agent tool grants
+
+| Tool | Granted | Reason / Basis |
+|---|---|---|
+| Read, Grep, Glob | YES | Repository inspection is needed to plan (`planner.md` lines 4 and 19). [Def] |
+| Edit, Write | NO | "Do not modify, create, or delete files" (`planner.md` line 22); Module 3 map line 5. [LP] [Def] |
+| Bash | NO | Planning does not execute commands (Module 3 map line 5). [LP] [Def] |
+| Direct Read of `.memory/reference/` files above `internal` | NO | Bypasses the retrieval ceiling. The log does not consistently attribute the HO-06 read: line 321 says "The Planner", line 352 says "an agent". In HO-01 the Planner refused this fallback (`calibration-log.md` line 289). | [B4] |
+
+## Role: implementer
+
+**Version:** v1.1.0  
+**Defined in:** `.claude/agents/implementer.md`  
+**Module 4 runtime role:** `implementer`
+
+### MCP server and operation access
+
+| Operation | Server | Granted | Justification / Denial reason | Basis |
+|---|---|---|---|---|
+| write_entry | storage | YES | Stores one `internal` lesson in `proj-lessons` after each real code change (`implementer.md` lines 25–29). | [Def] |
+| read_entry | storage | NO | Not in the definition's tool list (`implementer.md` line 4); lessons arrive through retrieval. | [LP] |
+| list_entries | storage | NO | Not in the definition's tool list; no implementation step enumerates entries. | [LP] |
+| update_entry | storage | NO | The Implementer writes new lessons only; it never revises stored entries. | [LP] |
+| delete_entry | storage | NO | Must not delete project state without authorization. No MarketRadar step needs deletion. | [LP] |
+| audit_read | storage | NO | Audit inspection is owned by the Orchestrator. | [LP] |
+| retrieve | retrieval | YES | The definition requires lesson retrieval at `internal` before implementing (`implementer.md` lines 15–18). | [Def] |
+
+### Skill activation scope
+
+| Skill | Activation permitted | Reason / Basis |
+|---|---|---|
+| run-tests | NO | "Do not evaluate your own work with the test runner" (`implementer.md` line 23). The Module 3 map denies test execution (line 6). [Def] |
+| draft-pr-description | NO | No workflow step asks the Implementer to draft PRs. [LP] |
+| summarize-session | NO | The output template (`implementer.md` lines 39–50) already covers this. [LP] |
+| check-gmail | NO | No MarketRadar use; brings external personal data into context. [LP] |
+| send-email | NO | No MarketRadar use; external publication. [LP] |
+| send-slack-message | NO | No MarketRadar use; external publication. [LP] |
+| rebuild-and-deploy | NO | No MarketRadar use; pushes an image to DockerHub. [LP] |
+
+### Data classification ceiling
+
+**Maximum level:** internal  
+**Reason:** The definition passes `classification_ceiling: internal` (`implementer.md` line 17) and stores lessons as `internal` (line 28). No implementation task needs confidential material.
+
+### Autonomy level
+
+**Level:** medium  
+**Conditions for human checkpoint:**
+- A human approves the plan before work starts (`CLAUDE.md` line 208).
+- If files outside the approved list are needed, the Implementer returns to the Orchestrator (`implementer.md` line 24).
+- Explicit human authorization is required before deleting any file or any project state.
+
+**Reason:** `permissionMode: acceptEdits` (`implementer.md` line 6) applies edits automatically. Those edits are limited to the approved scope and can be reverted with git.  
+**Container permissions:** workspace read-write, memory mounted (`scripts/run-agent.sh` lines 14–17)
+
+### Agent tool grants
+
+| Tool | Granted | Reason / Basis |
+|---|---|---|
+| Read, Grep, Glob, Edit, Write | YES, within the approved file list | Needed to implement the approved plan (`implementer.md` lines 4 and 19–22). [Def] |
+| Bash | NO | Not in the definition. Test execution belongs to the Tester. [LP] [Def] |
+| Direct Read of `.memory/reference/` files above `internal` | NO | Bypasses the retrieval ceiling. [B4] |
 
 ## Role: tester
 
-**Version:** v1.0.0  
-**Defined in:** `.agents/tester.md`
+**Version:** v1.1.0  
+**Defined in:** `.claude/agents/tester.md`  
+**Module 4 runtime role:** `tester`
 
 ### MCP server and operation access
 
-| Operation | Server | Granted | Justification / Denial reason |
-|---|---|---|---|
-| read_entry | storage | YES | Tester reads decisions and test context. |
-| list_entries | storage | YES | Tester lists available state before reporting. |
-| write_entry | storage | NO | Tester reports results but does not change stored project state. |
-| update_entry | storage | NO | Tester reports results but does not update stored project state. |
-| delete_entry | storage | NO | Tester must not remove project state. |
-| audit_read | storage | NO | Audit inspection is owned by the orchestrator. |
-| retrieve | retrieval | YES | Tester retrieves internal references for test context. |
+| Operation | Server | Granted | Justification / Denial reason | Basis |
+|---|---|---|---|---|
+| write_entry | storage | NO | The Tester reports PASS/FAIL to the Orchestrator (`tester.md` lines 52–54) and must not change project state. | [LP] |
+| read_entry | storage | NO | Its inputs arrive in the handoff (`tester.md` lines 26–32). | [LP] |
+| list_entries | storage | NO | Its inputs arrive in the handoff. | [LP] |
+| update_entry | storage | NO | The Tester must not change project state. | [LP] |
+| delete_entry | storage | NO | The Tester must not change project state. | [LP] |
+| audit_read | storage | NO | Audit inspection is owned by the Orchestrator. | [LP] |
+| retrieve | retrieval | YES | The definition requires lesson retrieval at `internal` (`tester.md` lines 15–18). Denied by permission mode (`plan` or `dontAsk`) in every post-calibration holdout (`calibration-log.md` lines 336–353). | [Def] [B5] |
 
 ### Skill activation scope
 
-| Skill | Activation permitted | Reason if denied |
+| Skill | Activation permitted | Reason / Basis |
 |---|---|---|
-| run-tests | YES | Core tester responsibility. |
-| draft-pr-description | NO | Owned by project-manager role. |
-| summarize-session | YES | Tester may summarize its own work. |
+| run-tests | YES (intent) | Running tests is the Tester's core duty (`tester.md` line 20). It cannot be activated today: the skill is not defined and the Tester has no Skill tool. A scoped `run-tests` skill is a candidate mitigation for B1 (D6). [Def] |
+| draft-pr-description | NO | No workflow step asks the Tester to draft PRs. [LP] |
+| summarize-session | NO | The verification report is the Tester's output (`tester.md` lines 34–48). [LP] |
+| check-gmail | NO | No MarketRadar use; brings external personal data into context. [LP] |
+| send-email | NO | No MarketRadar use; external publication. [LP] |
+| send-slack-message | NO | No MarketRadar use; external publication. [LP] |
+| rebuild-and-deploy | NO | No MarketRadar use; pushes an image to DockerHub. [LP] |
 
 ### Data classification ceiling
 
 **Maximum level:** internal  
-**Reason:** Tester does not require confidential data to run or report tests.
+**Reason:** The definition passes `classification_ceiling: internal` (`tester.md` line 17). Verification needs no confidential material.
 
 ### Autonomy level
 
 **Level:** low  
-**Conditions for human checkpoint:** Any write to tracked repository files or stored project state.  
-**Reason:** Testing should inspect and report without altering source-controlled files.  
-**Container permissions:** workspace read-only, memory omitted
+**Conditions for human checkpoint:** Escalate before any command other than the project's test, lint or type-check commands, and before any write to tracked files or stored state.  
+**Reason:** Verification must stay independent of the work it checks. Unscoped Bash is the main exposure [B1].  
+**Container permissions:** workspace read-only, memory omitted (`scripts/run-agent.sh` lines 18–21)
+
+### Agent tool grants
+
+| Tool | Granted | Reason / Basis |
+|---|---|---|
+| Read, Grep, Glob | YES | Needed to inspect changed files (`tester.md` line 19). [Def] |
+| Edit, Write | NO | "Do not modify, create, or delete source files" and "Do not fix failures yourself" (`tester.md` lines 22–23). [Def] |
+| Bash: validation commands only (`npm run test`, `npm run lint` and the type check, in `tracker-api/` and `tracker-client/`) | YES | Running tests needs process execution (`docs/module3/module-3-reflection.md` line 65). [Def] |
+| Bash: everything else, including redirection, `rm`, `sed -i`, git writes and package installs | NO | Unscoped shell access can change the workspace under verification. `no_source_writes` cannot see Bash writes (`calibration-log.md` lines 52–56; reflection lines 69–76 and 95). This scoping is not enforced today (D5). [B1] [B2] |
+| Direct Read of `.memory/reference/` files above `internal` | NO | Bypasses the retrieval ceiling. [B4] |
+
+## Role: marketradar-code-reviewer
+
+**Version:** v1.1.0  
+**Defined in:** `.claude/agents/marketradar-code-reviewer.md`  
+**Module 4 runtime role:** `reviewer` (self-declares `calling_role: code-reviewer`, `marketradar-code-reviewer.md` line 15)
+
+### MCP server and operation access
+
+| Operation | Server | Granted | Justification / Denial reason | Basis |
+|---|---|---|---|---|
+| write_entry | storage | NO | The Reviewer is read-only (`marketradar-code-reviewer.md` lines 18–19). HO-06 confirmed it made no storage writes (`calibration-log.md` line 320). | [LP] [Def] |
+| read_entry | storage | NO | Code review reads code, not stored entries. | [LP] |
+| list_entries | storage | NO | Code review reads code, not stored entries. | [LP] |
+| update_entry | storage | NO | The Reviewer is read-only. | [LP] [Def] |
+| delete_entry | storage | NO | The Reviewer is read-only. | [LP] [Def] |
+| audit_read | storage | NO | Audit inspection is owned by the Orchestrator. | [LP] |
+| retrieve | retrieval | YES | The definition requires lesson retrieval at `internal` (`marketradar-code-reviewer.md` lines 12–15). Denied by permission mode in HO-05 and HO-06 (reflection line 88). | [Def] [B5] |
+
+### Skill activation scope
+
+| Skill | Activation permitted | Reason / Basis |
+|---|---|---|
+| run-tests | NO | Read-only role; testing belongs to the Tester. The definition forbids commands that change repository or application state (`marketradar-code-reviewer.md` line 19). [Def] [LP] |
+| draft-pr-description | NO | Review findings are the Reviewer's only output. [LP] |
+| summarize-session | NO | The review ends with its own overall assessment (`marketradar-code-reviewer.md` line 27). [LP] |
+| check-gmail | NO | No MarketRadar use; brings external personal data into context. [LP] |
+| send-email | NO | No MarketRadar use; external publication. [LP] |
+| send-slack-message | NO | No MarketRadar use; external publication. [LP] |
+| rebuild-and-deploy | NO | No MarketRadar use; pushes an image to DockerHub. [LP] |
+
+### Data classification ceiling
+
+**Maximum level:** internal  
+**Reason:** The definition passes `classification_ceiling: internal` (`marketradar-code-reviewer.md` line 14). Reviewing internal work needs no confidential material.
+
+### Autonomy level
+
+**Level:** low  
+**Conditions for human checkpoint:** Review output is advisory only. Any action beyond producing findings escalates to the Orchestrator.  
+**Reason:** A review role that can change state can quietly alter the work it is supposed to inspect independently.  
+**Container permissions:** workspace read-only, memory omitted (`scripts/run-agent.sh` lines 18–21)
+
+### Agent tool grants
+
+| Tool | Granted | Reason / Basis |
+|---|---|---|
+| Read, Grep, Glob | YES | These cover everything a read-only review needs (reflection line 79). [Def] |
+| Bash | NO | Not needed. In HO-06 it was used only for `ls`, `grep` and `wc` (`calibration-log.md` lines 57, 319 and 364). The frontmatter still grants it (`marketradar-code-reviewer.md` line 4; D4). [B3] |
+| Edit, Write | NO | "Do not modify, create, or delete any project files" (`marketradar-code-reviewer.md` line 18). [Def] |
+| Direct Read of `.memory/reference/` files above `internal` | NO | Bypasses the retrieval ceiling. [B4] |
 
 ## Role: project-manager
 
-**Version:** v1.0.0  
-**Defined in:** `.agents/project-manager.md`
+**Version:** v1.1.0  
+**Defined in:** `.claude/agents/project-manager.md`  
+**Module 4 runtime role:** `project-manager` (self-declares `calling_role: project_manager`, `project-manager.md` line 22)
 
 ### MCP server and operation access
 
-| Operation | Server | Granted | Justification / Denial reason |
-|---|---|---|---|
-| read_entry | storage | YES | Project-manager reads project state for summaries. |
-| list_entries | storage | YES | Project-manager lists state before drafting descriptions. |
-| write_entry | storage | NO | Project-manager does not update project state directly. |
-| update_entry | storage | NO | Project-manager does not update project state directly. |
-| delete_entry | storage | NO | Project-manager must not remove project state. |
-| audit_read | storage | NO | Audit inspection is owned by the orchestrator. |
-| retrieve | retrieval | NO | Project-manager does not perform retrieval in this sample workflow. |
+| Operation | Server | Granted | Justification / Denial reason | Basis |
+|---|---|---|---|---|
+| write_entry | storage | YES | Its sole job is to record an `internal` `task_outcome` (`project-manager.md` lines 18–24). | [Def] |
+| read_entry | storage | NO | Evidence arrives from the Orchestrator (`project-manager.md` lines 14 and 31–37). | [LP] |
+| list_entries | storage | NO | Evidence arrives from the Orchestrator. | [LP] |
+| update_entry | storage | NO | It records new outcomes only. | [LP] |
+| delete_entry | storage | NO | No outcome-recording step needs deletion. | [LP] |
+| audit_read | storage | NO | Audit inspection is owned by the Orchestrator. | [LP] |
+| retrieve | retrieval | NO | "Do not retrieve reference documents" (`project-manager.md` line 27). This matches the allow-list denial (`mcp-servers/retrieval/allow-list.json` lines 19–22). | [Def] [LP] |
 
 ### Skill activation scope
 
-| Skill | Activation permitted | Reason if denied |
+| Skill | Activation permitted | Reason / Basis |
 |---|---|---|
-| run-tests | NO | Planning and description work does not run tests. |
-| draft-pr-description | YES | Project-manager owns pull-request descriptions. |
-| summarize-session | YES | Project-manager may summarize its own work. |
+| run-tests | NO | "Do not run tests or shell commands" (`project-manager.md` line 26). [Def] |
+| draft-pr-description | NO | The MarketRadar Project Manager records outcomes; it does not draft PRs. It has no Skill tool (`project-manager.md` line 4). [LP] |
+| summarize-session | NO | The outcome report is its output (`project-manager.md` lines 39–53). [LP] |
+| check-gmail | NO | No MarketRadar use; brings external personal data into context. [LP] |
+| send-email | NO | External publication is not its role. [LP] |
+| send-slack-message | NO | External publication is not its role. [LP] |
+| rebuild-and-deploy | NO | No MarketRadar use; pushes an image to DockerHub. [LP] |
 
 ### Data classification ceiling
 
-**Maximum level:** public  
-**Reason:** Retrieval is denied for this role; public is recorded as the default ceiling.
+**Maximum level:** internal  
+**Reason:** It receives internal task evidence and writes `classification: internal` (`project-manager.md` line 21).
 
 ### Autonomy level
 
 **Level:** low  
-**Conditions for human checkpoint:** Before publishing text externally or changing repository state.  
-**Reason:** Project-manager outputs are human-facing and should remain advisory.  
-**Container permissions:** workspace read-only, memory omitted
+**Conditions for human checkpoint:** It must not mark a task complete when review or testing failed. If evidence is missing or contradictory, it reports a blocker instead (`project-manager.md` lines 17 and 28).  
+**Reason:** It runs in `permissionMode: dontAsk` (`project-manager.md` line 6), so calls outside its tool list are refused rather than prompted. Its single permitted action is a new internal record.  
+**Container permissions:** workspace read-only, memory omitted (`scripts/run-agent.sh` lines 18–21). See D9.
+
+### Agent tool grants
+
+| Tool | Granted | Reason / Basis |
+|---|---|---|
+| `mcp__storage__write_entry` | YES | Its only tool (`project-manager.md` line 4). [Def] |
+| Read, Grep, Glob | NO | Evidence arrives in the handoff. [LP] |
+| Edit, Write | NO | "Do not modify application code" (`project-manager.md` line 25). [Def] |
+| Bash | NO | "Do not run tests or shell commands" (`project-manager.md` line 26). [Def] |
 
 ## Role: orchestrator
 
-**Version:** v1.0.0  
-**Defined in:** `.agents/orchestrator.md`
+**Version:** v1.1.0  
+**Defined in:** `CLAUDE.md` "Orchestrator Workflow" (lines 200–242) and `docs/module3/routing-and-tool-grant-map.md`. There is no agent definition file.  
+**Module 4 runtime role:** `orchestrator`
 
 ### MCP server and operation access
 
-| Operation | Server | Granted | Justification / Denial reason |
-|---|---|---|---|
-| write_entry | storage | YES | Orchestrator records workflow decisions. |
-| read_entry | storage | YES | Orchestrator reads state while coordinating roles. |
-| list_entries | storage | YES | Orchestrator lists state while coordinating roles. |
-| update_entry | storage | YES | Orchestrator updates state after coordinated work. |
-| delete_entry | storage | YES | Orchestrator manages state lifecycle and is the only role permitted to delete. |
-| audit_read | storage | YES | Orchestrator inspects authorization denials. |
-| retrieve | retrieval | YES | Orchestrator retrieves references when coordinating. |
+| Operation | Server | Granted | Justification / Denial reason | Basis |
+|---|---|---|---|---|
+| write_entry | storage | NO | The Orchestrator coordinates rather than performing specialized work (`CLAUDE.md` line 232). Outcomes are recorded by the Project Manager and lessons by the Implementer. | [LP] [Def] |
+| read_entry | storage | YES | Needed to verify the Project Manager's recorded outcome when evaluating completion (`CLAUDE.md` line 232: "evaluates"). | [Def] |
+| list_entries | storage | YES | Needed to locate recorded outcomes when evaluating completion. | [Def] |
+| update_entry | storage | NO | No orchestration step revises stored entries. | [LP] |
+| delete_entry | storage | NO | No blanket permissions, and no MarketRadar step deletes state. Deletion is a human action outside the agent workflow. | [LP] |
+| audit_read | storage | YES | Evaluating and escalating need visibility of authorization denials (`CLAUDE.md` line 232: "evaluates … and escalates"). Read-only. | [Def] |
+| retrieve | retrieval | NO | `CLAUDE.md` gives the Orchestrator no retrieval step; it loads memory through the startup reads (lines 188–196). Lessons are retrieved by the roles that use them. | [LP] |
 
 ### Skill activation scope
 
-| Skill | Activation permitted | Reason if denied |
+| Skill | Activation permitted | Reason / Basis |
 |---|---|---|
-| run-tests | YES | Orchestrator may invoke tests while coordinating. |
-| draft-pr-description | YES | Orchestrator may invoke PR drafting while coordinating. |
-| summarize-session | YES | Orchestrator may summarize workflow state. |
+| run-tests | NO | Verification belongs to the Tester. The evaluation gate requires a Tester PASS (`CLAUDE.md` lines 240–242). [Def] |
+| draft-pr-description | NO | No workflow step drafts PRs, and the skill is undefined. [LP] |
+| summarize-session | YES | A read-only, human-facing summary (`skills/summarize-session/SKILL.md`) used for completion and escalation reports (`CLAUDE.md` lines 213 and 216). [Def] |
+| check-gmail | NO | Brings external personal data into context; not part of the MarketRadar workflow. [LP] |
+| send-email | NO | External publication outside the MarketRadar workflow. [LP] |
+| send-slack-message | NO | External publication outside the MarketRadar workflow. [LP] |
+| rebuild-and-deploy | NO | Pushes an image to DockerHub; outside the MarketRadar workflow. [LP] |
 
 ### Data classification ceiling
 
-**Maximum level:** confidential  
-**Reason:** Orchestrator coordinates the full workflow and audits policy enforcement.
+**Maximum level:** internal  
+**Reason:** The startup reads cover project memory and knowledge files. No orchestration step needs the confidential lesson [LP]. B4 shows how confidential material can enter context through a direct Read.
 
 ### Autonomy level
 
 **Level:** medium  
-**Conditions for human checkpoint:** Before destructive operations, external publication, or any action outside the protected workflow.  
-**Reason:** Orchestration is reversible within the container, but lifecycle and publication actions need human accountability.  
-**Container permissions:** workspace read-write, memory mounted
+**Conditions for human checkpoint:**
+- Human approval after the Planner phase and before implementation (`CLAUDE.md` line 236).
+- Escalation after repeated FAIL (`CLAUDE.md` line 216).
+- Human approval before any storage deletion, any external publication, any skill activation outside these grants, and any change to permissions, `CLAUDE.md` or configuration.
+
+**Reason:** Routing is autonomous, but every effectful action is gated by a human.  
+**Container permissions:** workspace read-write, memory mounted (`scripts/run-agent.sh` lines 14–17)
+
+### Agent tool grants
+
+| Tool | Granted | Reason / Basis |
+|---|---|---|
+| Read, Grep, Glob | YES | Needed for startup memory reads and evaluation (`CLAUDE.md` lines 188–196). [Def] |
+| Agent (subagent delegation) | YES | Needed to route work to specialists (`CLAUDE.md` lines 202 and 206–216). [Def] |
+| Edit, Write on application code | NO | The Orchestrator does not perform specialized work (`CLAUDE.md` lines 232 and 242). Not enforced; see D14. [Def] |
+| Bash | NO | Not granted; implicit deny under the least-privilege default. Not enforced; see D14. [LP] |
+| Direct Read of `.memory/reference/` files above `internal` | NO | Bypasses the retrieval ceiling. [B4] |
+| `slack` and `gmail` MCP operations | NO | Configured for the `/workspace` session but unused by MarketRadar (D10). [LP] |
 
 ## Deterministic conversion history
 
 - `validator`: converted from agent to deterministic code. See `docs/adr/ADR-001-json-schema-validation-deterministic-conversion.md`. No MCP access required.
+
+## Deferred enforcement work
+
+This section records gaps between this policy and the current configuration. No change has been made for any item below. Until an item is resolved, this policy states the intended grant, and the configuration may be broader.
+
+| ID | Gap | Proposed action | Basis |
+|---|---|---|---|
+| D1 | The Planner has no Module 4 runtime role. `scripts/run-agent.sh` rejects it (lines 22–26) and neither allow-list names it. | Add `planner` to `mcp-servers/retrieval/allow-list.json` with ceiling `internal`, and add a `run-agent.sh` case (workspace read-only, memory omitted). | `docs/module3/migration-notes.md` line 91 |
+| D2 | The MCP tools in `.claude/agents/*.md` resolve to no configured server. The agent bodies use Module 3 argument shapes (`project_id`, `calling_role`, …), but Module 4 uses `write_entry(key, value)` (`storage/server.py` line 72) and `retrieve(query, top_k)` (`retrieval/server.py` line 74). | Register the Module 4 servers and update the agent bodies. | [Def] |
+| D3 | The allow-lists differ from this policy. `mcp-servers/storage/allow-list.json`:<br>- denies `write_entry` to `project-manager`, its only function (lines 2–5);<br>- grants `read_entry`/`list_entries` to implementer, reviewer, tester and project-manager (lines 6–19);<br>- grants `update_entry` to implementer (lines 20–23);<br>- grants `write_entry`, `update_entry` and `delete_entry` to orchestrator (lines 2–5, 20–26).<br>`mcp-servers/retrieval/allow-list.json` grants orchestrator `confidential` retrieval (lines 15–18). | Narrow the allow-lists to this policy. Align the self-declared names (`code-reviewer`, `project_manager`) with the runtime names (`reviewer`, `project-manager`). Until that is done, the allow-lists are broader than this policy, and this policy governs. | [LP] |
+| D4 | `marketradar-code-reviewer` frontmatter still grants Bash (line 4). | Remove Bash. | [B3] |
+| D5 | Tester Bash is unscoped. | Scope it to the validation commands with command-scoped permission rules. | [B1] |
+| D6 | `no_source_writes` cannot detect writes made through Bash. | Detect Bash writes in the evaluator, for example with a working-tree diff. Optionally define a scoped `run-tests` skill. | [B2] [B1] |
+| D7 | Retrieval is denied by permission mode for the Planner, Tester and Reviewer. | Explicitly allow `mcp__retrieval__retrieve` for those roles under their permission modes. | [B5] |
+| D8 | Direct Read of `.memory/reference/` can bypass the classification ceiling. | Deny direct Read of `.memory/reference/` files above the role's ceiling. | [B4] |
+| D9 | `run-agent.sh` mounts the workspace read-only for `project-manager` (lines 18–21), while the storage store path defaults to the workspace-relative `logs/storage-store.json` (`storage/server.py` line 32). Its only granted write may therefore fail. This is inferred from configuration and has not been tested. | Set `STORAGE_STORE` under `/logs` for storage-writing roles. | Configuration |
+| D10 | `slack` and `gmail` are configured for `/workspace` (`/root/.claude.json`) and inherited by the Orchestrator session. | Remove them, deny them, or scope them with permission rules for MarketRadar sessions. | [LP] |
+| D11 | Policy drift detection is incomplete. `eval/test_policy.py` checks only file existence and CI properties (lines 8–52), not the per-role tables. No pre-commit hook is installed. `README.md` line 452 claims the suite checks the allow-lists, skill scope and container permissions against this policy. | Add per-role table checks, and install or remove the hook claim. | Repository state |
+| D12 | `docs/routing-and-tool-grant-map.md` (lines 5–9) and `eval/red-team-*.md` describe the sample-role grants. | Update them after this policy is approved. | Repository state |
+| D13 | Implementer Edit/Write scoping is not enforced. The `tools:` line in `.claude/agents/implementer.md` (line 4) grants unrestricted Edit/Write. The approved-file-list limit comes only from the prompt instructions (`implementer.md` lines 20 and 24). | Enforce the scope with path-scoped permission rules or a review gate. | [LP] |
+| D14 | The Parent Orchestrator session holds Bash, Edit and Write because it runs as the main Claude Code session. This policy grants none of them, so they are denied by the least-privilege default, but nothing restricts them at runtime. | Restrict them with session permission rules, or document narrow read-only Bash exceptions through a PR. | [LP], `CLAUDE.md` role boundaries |
 
 ## Policy maintenance
 
@@ -219,6 +411,8 @@ not conflict with any near-miss pattern in the calibration log.
 
 - locally, on every commit that changes a governed file, through the pre-commit hook, and
 - on the shared repository, on every push and pull request, through CI.
+
+**Current status.** `eval/test_policy.py` currently checks only file existence and CI properties, not per-role tables, and no pre-commit hook is installed in this repository (no `.pre-commit-config.yaml` or `.git/hooks/pre-commit`); see Deferred enforcement work.
 
 **Cadence.** Governed changes are checked as they happen. A scheduled full run should be added quarterly if the deployed environment can drift outside of commits.
 
