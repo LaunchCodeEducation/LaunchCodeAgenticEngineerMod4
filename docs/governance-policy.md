@@ -56,11 +56,12 @@ not conflict with any near-miss pattern in the calibration log.
   - **[LP]:** least-privilege default (preamble). The role has no task that needs the access.
   - **[Def]:** the role's agent definition or `CLAUDE.md`.
 - **Changelog:** v1.1.0 (2026-11-04): per-role entries replaced with the MarketRadar roles; preamble unchanged from v1.0.0.
+  - v1.1.1 (2026-11-04): documentation reconciliation notes resolved; role entries and preamble unchanged.
 
 ### Documentation reconciliation notes
 
-1. **Autonomy ratings differ from the Module 3 map.** The Module 3 routing map (`docs/module3/routing-and-tool-grant-map.md` lines 5 and 7–8) rates autonomy as "High within planning scope", "High within verification scope" and "High for routing". Those ratings describe freedom *within* a role's scope. This policy instead rates what a role can effect without a human, which gives Planner low, Tester low and Orchestrator medium.
-2. **The standard sequence omits two active roles.** The `CLAUDE.md` / Module 3 sequence (Planner → Implementer → Tester; `CLAUDE.md` lines 206–216) leaves out the Reviewer and the Project Manager. Both are active roles that are used outside that sequence (cf. the HO-02 conflict, `docs/module3/calibration-log.md` line 360). Where they belong in the routing map is still to be decided.
+1. **Autonomy ratings: resolved (Module 4.1).** The Module 3 routing map's ratings (`docs/module3/routing-and-tool-grant-map.md` lines 5–8) are kept as a historical record. The map's "Current policy clarification (Module 4.1)" section restates the ratings for all six roles as this policy sets them: Planner low, Implementer medium, Tester low, Reviewer low, Project Manager low, Orchestrator medium. It also states that this policy governs.
+2. **Standard sequence: resolved in the routing map (Module 4.1).** The map's "Current policy clarification (Module 4.1)" section adds Reviewer and Project Manager rows and a conditional extended sequence: Implementer → Reviewer (when review is required) → Tester → Project Manager (when outcome recording is required). That order is the frozen HO-02 path, which has not been run end to end (`docs/module3/calibration-log.md` line 360). `CLAUDE.md` "Standard Sequence" (lines 206–216) is unchanged and does not yet route either role; that remains an open item for a separate, behaviour-changing decision.
 
 ## Role: planner
 
