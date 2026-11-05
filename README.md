@@ -449,12 +449,12 @@ docker run --rm -v "$PWD":/workspace agentic_engineer_4 \
 | `test_deterministic_router.py` | `scripts/route_task_deterministic.py` path-to-role routing logic |
 | `test_deterministic_step.py` | `scripts/validate_handoff_deterministic.py` field validation logic |
 | `test_deterministic.py` | CLI invocation of the validator, directory structure, governance-policy content |
-| `test_policy.py` | Storage allow-list, retrieval allow-list, skill-scope files, and container permissions all agree with `docs/governance-policy.md` |
+| `test_policy.py` | Governance and CI files exist and the CI policy gate is not advisory; MCP storage and retrieval allow-list authorization for every runtime role and for non-runtime names, the retrieval classification ceiling, audit records and the storage store default, against a matrix hard-coded from `docs/governance-policy.md`. It does not check skill scope or container permissions (container permissions are checked on the Docker host by `scripts/verify-container-permissions.sh`). |
 | `test_rubric_suite.py` | Rubric/judge placeholders — confirms ADR and CI design docs contain required content |
 
 ### Notes
 
-- `eval/test_policy.py` reads `.skills/*.md` for skill-scope enforcement. The `.skills/` directory is currently empty — add per-role skill scope files there as you build out the governance lesson content.
+- `eval/test_policy.py` does not read `.skills/*.md` or check skill scope yet (governance policy D11). The `.skills/` directory is currently empty; per-role skill scope files and their checks are still to be added.
 - Tests that check directory structure (`.agents`, `.skills`, `docs/adr`, etc.) expect those directories to exist in the bind-mounted workspace. They are created automatically when the container runs without a bind-mount.
 - `scripts/run-reviewer.py` is a safe sample that does **not** call a live LLM. It writes a deterministic advisory review so the CI workflow can be exercised without API spend.
 - Containers started with `scripts/run-agent.sh` write runtime logs to the `agent-logs` Docker volume, mounted at `/logs`, not to the repository. `logs/` is not gitignored.

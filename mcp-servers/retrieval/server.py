@@ -53,7 +53,10 @@ def _retrieval_ceiling() -> str:
     if not rule or not rule.get("granted"):
         reason = (rule or {}).get("denial_reason", "role is not granted retrieval")
         _record_audit("authorization_denied", "retrieve", reason)
-        raise ToolError(f"authorization_denied: {reason}. See docs/governance-policy.md.")
+        raise ToolError(
+            f"authorization_denied: role '{CALLING_ROLE}' may not call 'retrieve': "
+            f"{reason}. See docs/governance-policy.md."
+        )
     return str(rule["classification_ceiling"])
 
 
@@ -88,6 +91,11 @@ def retrieve(query: str, top_k: int = 5) -> list:
             "retrieve",
             f"{withheld} result(s) above the '{ceiling}' ceiling were withheld",
         )
+    _record_audit(
+        "retrieval_success",
+        "retrieve",
+        f"{len(visible)} result(s) returned at the '{ceiling}' ceiling",
+    )
     return visible
 
 

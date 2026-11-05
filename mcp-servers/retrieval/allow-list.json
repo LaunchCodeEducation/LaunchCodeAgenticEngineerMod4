@@ -13,12 +13,16 @@
       "classification_ceiling": "internal"
     },
     "orchestrator": {
-      "granted": true,
-      "classification_ceiling": "confidential"
+      "granted": false,
+      "denial_reason": "orchestrator does not perform retrieval"
     },
     "project-manager": {
       "granted": false,
       "denial_reason": "project-manager does not perform retrieval"
+    },
+    "planner": {
+      "granted": true,
+      "classification_ceiling": "internal"
     }
   }
 }

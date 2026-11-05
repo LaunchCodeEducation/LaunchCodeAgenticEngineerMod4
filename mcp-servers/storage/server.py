@@ -29,7 +29,7 @@ ALLOW_LIST_PATH = Path(__file__).parent / "allow-list.json"
 ALLOW_LIST = json.loads(ALLOW_LIST_PATH.read_text(encoding="utf-8"))
 AUDIT_LOG_PATH = Path(os.environ.get("STORAGE_AUDIT_LOG", "logs/storage-audit-log.jsonl"))
 AUDIT_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-STORE_PATH = Path(os.environ.get("STORAGE_STORE", "logs/storage-store.json"))
+STORE_PATH = Path(os.environ.get("STORAGE_STORE", str(AUDIT_LOG_PATH.parent / "storage-store.json")))
 STORE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
