@@ -27,11 +27,11 @@ not conflict with any near-miss pattern in the calibration log.
 ## Scope and evidence
 
 - **Roles in scope:** the six MarketRadar roles below. They replace the earlier Module 4 sample-role sections, which pointed to `.agents/<role>.md` files that do not exist (`.agents/` contains only `.gitkeep`). Git history keeps the earlier sections.
-- **Runtime role names:** Module 4 servers authorize on the `AGENT_ROLE` environment variable set by `scripts/run-agent.sh` (line 55; read at `mcp-servers/storage/server.py` line 27 and `mcp-servers/retrieval/server.py` line 27). They do not use the `calling_role` an agent declares for itself.
+- **Runtime role names:** Module 4 servers authorize on the `AGENT_ROLE` environment variable set by `scripts/run-agent.sh` (line 73; read at `mcp-servers/storage/server.py` line 27 and `mcp-servers/retrieval/server.py` line 27). They do not use the `calling_role` an agent declares for itself.
 
   | Role (this policy) | Agent definition | Module 4 runtime role (`AGENT_ROLE`) | Self-declared `calling_role` |
   |---|---|---|---|
-  | planner | `.claude/agents/planner.md` | none: `run-agent.sh` rejects it (lines 22–26; D1) | `planner` |
+  | planner | `.claude/agents/planner.md` | `planner` (`run-agent.sh` lines 23–27); not yet in either allow-list (D1) | `planner` |
   | implementer | `.claude/agents/implementer.md` | `implementer` | `implementer` |
   | tester | `.claude/agents/tester.md` | `tester` | `tester` |
   | marketradar-code-reviewer | `.claude/agents/marketradar-code-reviewer.md` | `reviewer` | `code-reviewer` |
@@ -47,7 +47,7 @@ not conflict with any near-miss pattern in the calibration log.
   - `docs/module3/calibration-log.md` records no near-miss patterns (`docs/module3/governance-risk-notes.md`, "Near-miss section status", lines 6–10). The preamble's pull-request check is therefore applied against findings B1–B5 in those risk notes.
   - No near-miss is claimed for MarketRadar.
   - The near-miss patterns in `docs/calibration-log.md` are Module 4 template material, not MarketRadar evidence, and are not cited here.
-- **Status:** these entries state policy intent. Grants are not yet enforced; see Deferred enforcement work. Today:
+- **Status:** these entries state policy intent. MCP, skill and tool grants are not yet enforced; see Deferred enforcement work. Container permissions are enforced only for containers started with `scripts/run-agent.sh`, as checked by `scripts/verify-container-permissions.sh`. Subagents started through the Claude Code Agent tool, which is the normal orchestration workflow, do not use the launcher: they run inside the Orchestrator's container and inherit its read-write workspace, environment and MCP configuration, so they have no container-level isolation (D15). Today:
   - the `mcp__storage__*` and `mcp__retrieval__*` tools named in `.claude/agents/*.md` are not connected to any configured MCP server. Only `slack` and `gmail` are configured, in the `/workspace` project entry of `/root/.claude.json`.
   - no subagent holds the Skill tool.
   - `run-tests` and `draft-pr-description` have no skill definitions. `skills/` defines only `check-gmail`, `rebuild-and-deploy`, `send-email`, `send-slack-message` and `summarize-session`.
@@ -57,6 +57,8 @@ not conflict with any near-miss pattern in the calibration log.
   - **[Def]:** the role's agent definition or `CLAUDE.md`.
 - **Changelog:** v1.1.0 (2026-11-04): per-role entries replaced with the MarketRadar roles; preamble unchanged from v1.0.0.
   - v1.1.1 (2026-11-04): documentation reconciliation notes resolved; role entries and preamble unchanged.
+  - v1.1.2 (2026-11-05): Enforcement Layer 1 (container permissions): `run-agent.sh` line citations updated, `planner` launchable, D1 launcher part resolved; grants, allow-lists and role entries otherwise unchanged.
+  - v1.1.3 (2026-11-05): `run-agent.sh` stores `/logs` in the named volume `agent-logs` instead of the repository; container permissions documented as launcher-only (D15); grants, allow-lists and role entries otherwise unchanged.
 
 ### Documentation reconciliation notes
 
@@ -67,7 +69,7 @@ not conflict with any near-miss pattern in the calibration log.
 
 **Version:** v1.1.0  
 **Defined in:** `.claude/agents/planner.md`  
-**Module 4 runtime role:** none. `scripts/run-agent.sh` rejects `planner` (lines 22–26) and neither allow-list names it (D1).
+**Module 4 runtime role:** `planner` (`scripts/run-agent.sh` lines 23–27). Neither allow-list names it yet (D1).
 
 ### MCP server and operation access
 
@@ -105,7 +107,7 @@ The Planner subagent does not hold the Skill tool (`planner.md` line 4).
 **Level:** low  
 **Conditions for human checkpoint:** The plan has no effect until a human approves it (`CLAUDE.md` "Human Checkpoints", line 236; `planner.md` line 53).  
 **Reason:** The Planner only proposes. All effect is gated by human approval.  
-**Container permissions:** not launchable through `scripts/run-agent.sh` (D1). The intended setting is workspace read-only, memory omitted.
+**Container permissions:** workspace read-only, memory omitted (`scripts/run-agent.sh` lines 23–27). Applies only when launched with `scripts/run-agent.sh`; not to Agent-tool subagents (D15).
 
 ### Agent tool grants
 
@@ -160,7 +162,7 @@ The Planner subagent does not hold the Skill tool (`planner.md` line 4).
 - Explicit human authorization is required before deleting any file or any project state.
 
 **Reason:** `permissionMode: acceptEdits` (`implementer.md` line 6) applies edits automatically. Those edits are limited to the approved scope and can be reverted with git.  
-**Container permissions:** workspace read-write, memory mounted (`scripts/run-agent.sh` lines 14–17)
+**Container permissions:** workspace read-write except `.memory/knowledge` and `.memory/reference` (read-only, lines 58–61), memory mounted (`scripts/run-agent.sh` lines 18–22). Applies only when launched with `scripts/run-agent.sh`; not to Agent-tool subagents (D15).
 
 ### Agent tool grants
 
@@ -210,7 +212,7 @@ The Planner subagent does not hold the Skill tool (`planner.md` line 4).
 **Level:** low  
 **Conditions for human checkpoint:** Escalate before any command other than the project's test, lint or type-check commands, and before any write to tracked files or stored state.  
 **Reason:** Verification must stay independent of the work it checks. Unscoped Bash is the main exposure [B1].  
-**Container permissions:** workspace read-only, memory omitted (`scripts/run-agent.sh` lines 18–21)
+**Container permissions:** workspace read-only, memory omitted (`scripts/run-agent.sh` lines 23–27). Applies only when launched with `scripts/run-agent.sh`; not to Agent-tool subagents (D15).
 
 ### Agent tool grants
 
@@ -262,7 +264,7 @@ The Planner subagent does not hold the Skill tool (`planner.md` line 4).
 **Level:** low  
 **Conditions for human checkpoint:** Review output is advisory only. Any action beyond producing findings escalates to the Orchestrator.  
 **Reason:** A review role that can change state can quietly alter the work it is supposed to inspect independently.  
-**Container permissions:** workspace read-only, memory omitted (`scripts/run-agent.sh` lines 18–21)
+**Container permissions:** workspace read-only, memory omitted (`scripts/run-agent.sh` lines 28–33; launch name `marketradar-code-reviewer` or alias `reviewer`). Applies only when launched with `scripts/run-agent.sh`; not to Agent-tool subagents (D15).
 
 ### Agent tool grants
 
@@ -313,7 +315,7 @@ The Planner subagent does not hold the Skill tool (`planner.md` line 4).
 **Level:** low  
 **Conditions for human checkpoint:** It must not mark a task complete when review or testing failed. If evidence is missing or contradictory, it reports a blocker instead (`project-manager.md` lines 17 and 28).  
 **Reason:** It runs in `permissionMode: dontAsk` (`project-manager.md` line 6), so calls outside its tool list are refused rather than prompted. Its single permitted action is a new internal record.  
-**Container permissions:** workspace read-only, memory omitted (`scripts/run-agent.sh` lines 18–21). See D9.
+**Container permissions:** workspace read-only, memory omitted (`scripts/run-agent.sh` lines 23–27). See D9. Applies only when launched with `scripts/run-agent.sh`; not to Agent-tool subagents (D15).
 
 ### Agent tool grants
 
@@ -368,7 +370,7 @@ The Planner subagent does not hold the Skill tool (`planner.md` line 4).
 - Human approval before any storage deletion, any external publication, any skill activation outside these grants, and any change to permissions, `CLAUDE.md` or configuration.
 
 **Reason:** Routing is autonomous, but every effectful action is gated by a human.  
-**Container permissions:** workspace read-write, memory mounted (`scripts/run-agent.sh` lines 14–17)
+**Container permissions:** workspace read-write except `.memory/knowledge` and `.memory/reference` (read-only, lines 58–61), memory mounted (`scripts/run-agent.sh` lines 18–22). Applies only when launched with `scripts/run-agent.sh`; not to Agent-tool subagents (D15).
 
 ### Agent tool grants
 
@@ -387,11 +389,11 @@ The Planner subagent does not hold the Skill tool (`planner.md` line 4).
 
 ## Deferred enforcement work
 
-This section records gaps between this policy and the current configuration. No change has been made for any item below. Until an item is resolved, this policy states the intended grant, and the configuration may be broader.
+This section records gaps between this policy and the current configuration. No change has been made for any item below unless the item says it is partly resolved. Until an item is resolved, this policy states the intended grant, and the configuration may be broader.
 
 | ID | Gap | Proposed action | Basis |
 |---|---|---|---|
-| D1 | The Planner has no Module 4 runtime role. `scripts/run-agent.sh` rejects it (lines 22–26) and neither allow-list names it. | Add `planner` to `mcp-servers/retrieval/allow-list.json` with ceiling `internal`, and add a `run-agent.sh` case (workspace read-only, memory omitted). | `docs/module3/migration-notes.md` line 91 |
+| D1 | Launcher part resolved (Module 4.1, Layer 1): `scripts/run-agent.sh` launches `planner` with workspace read-only and memory omitted (lines 23–27). Remaining: neither allow-list names `planner`. | Add `planner` to `mcp-servers/retrieval/allow-list.json` with ceiling `internal` (Layer 2). | `docs/module3/migration-notes.md` line 91 |
 | D2 | The MCP tools in `.claude/agents/*.md` resolve to no configured server. The agent bodies use Module 3 argument shapes (`project_id`, `calling_role`, …), but Module 4 uses `write_entry(key, value)` (`storage/server.py` line 72) and `retrieve(query, top_k)` (`retrieval/server.py` line 74). | Register the Module 4 servers and update the agent bodies. | [Def] |
 | D3 | The allow-lists differ from this policy. `mcp-servers/storage/allow-list.json`:<br>- denies `write_entry` to `project-manager`, its only function (lines 2–5);<br>- grants `read_entry`/`list_entries` to implementer, reviewer, tester and project-manager (lines 6–19);<br>- grants `update_entry` to implementer (lines 20–23);<br>- grants `write_entry`, `update_entry` and `delete_entry` to orchestrator (lines 2–5, 20–26).<br>`mcp-servers/retrieval/allow-list.json` grants orchestrator `confidential` retrieval (lines 15–18). | Narrow the allow-lists to this policy. Align the self-declared names (`code-reviewer`, `project_manager`) with the runtime names (`reviewer`, `project-manager`). Until that is done, the allow-lists are broader than this policy, and this policy governs. | [LP] |
 | D4 | `marketradar-code-reviewer` frontmatter still grants Bash (line 4). | Remove Bash. | [B3] |
@@ -399,12 +401,13 @@ This section records gaps between this policy and the current configuration. No 
 | D6 | `no_source_writes` cannot detect writes made through Bash. | Detect Bash writes in the evaluator, for example with a working-tree diff. Optionally define a scoped `run-tests` skill. | [B2] [B1] |
 | D7 | Retrieval is denied by permission mode for the Planner, Tester and Reviewer. | Explicitly allow `mcp__retrieval__retrieve` for those roles under their permission modes. | [B5] |
 | D8 | Direct Read of `.memory/reference/` can bypass the classification ceiling. | Deny direct Read of `.memory/reference/` files above the role's ceiling. | [B4] |
-| D9 | `run-agent.sh` mounts the workspace read-only for `project-manager` (lines 18–21), while the storage store path defaults to the workspace-relative `logs/storage-store.json` (`storage/server.py` line 32). Its only granted write may therefore fail. This is inferred from configuration and has not been tested. | Set `STORAGE_STORE` under `/logs` for storage-writing roles. | Configuration |
+| D9 | `run-agent.sh` mounts the workspace read-only for `project-manager` (lines 23–27), while the storage store path defaults to the workspace-relative `logs/storage-store.json` (`storage/server.py` line 32). Its only granted write may therefore fail. This is inferred from configuration and has not been tested. | Set `STORAGE_STORE` under `/logs` for storage-writing roles. | Configuration |
 | D10 | `slack` and `gmail` are configured for `/workspace` (`/root/.claude.json`) and inherited by the Orchestrator session. | Remove them, deny them, or scope them with permission rules for MarketRadar sessions. | [LP] |
 | D11 | Policy drift detection is incomplete. `eval/test_policy.py` checks only file existence and CI properties (lines 8–52), not the per-role tables. No pre-commit hook is installed. `README.md` line 452 claims the suite checks the allow-lists, skill scope and container permissions against this policy. | Add per-role table checks, and install or remove the hook claim. | Repository state |
 | D12 | `docs/routing-and-tool-grant-map.md` (lines 5–9) and `eval/red-team-*.md` describe the sample-role grants. | Update them after this policy is approved. | Repository state |
 | D13 | Implementer Edit/Write scoping is not enforced. The `tools:` line in `.claude/agents/implementer.md` (line 4) grants unrestricted Edit/Write. The approved-file-list limit comes only from the prompt instructions (`implementer.md` lines 20 and 24). | Enforce the scope with path-scoped permission rules or a review gate. | [LP] |
 | D14 | The Parent Orchestrator session holds Bash, Edit and Write because it runs as the main Claude Code session. This policy grants none of them, so they are denied by the least-privilege default, but nothing restricts them at runtime. | Restrict them with session permission rules, or document narrow read-only Bash exceptions through a PR. | [LP], `CLAUDE.md` role boundaries |
+| D15 | Subagents started through the Claude Code Agent tool (the normal orchestration workflow) do not use `scripts/run-agent.sh`. They run inside the Orchestrator's container and inherit its read-write workspace, environment and MCP configuration, so the container permissions in the role entries do not isolate them. The Orchestrator cannot start role containers itself without access to the Docker socket, which is denied. | Until a launch path that does not expose the Docker socket exists, in-process subagents are limited only by their `tools:` lists and permission rules (D4, D5, D13, D14). A role gets container-level isolation only when a human starts it with `scripts/run-agent.sh`. | Configuration |
 
 ## Policy maintenance
 

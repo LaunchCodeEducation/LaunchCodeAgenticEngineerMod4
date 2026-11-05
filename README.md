@@ -330,7 +330,7 @@ Note: agents added this way are lost when the container exits (since it runs wit
 
 ## Running Subagent Containers
 
-`scripts/run-agent.sh` (macOS/Linux) and `scripts/run-agent.ps1` (Windows) launch a subagent container enforcing the governance policy for the given role. Pass the role name as the first argument; any additional arguments are forwarded to the container.
+`scripts/run-agent.sh` (macOS/Linux) starts one role in its own container with the container permissions in `docs/governance-policy.md`, and `scripts/verify-container-permissions.sh` checks them on the Docker host. This applies only to containers started with the launcher: subagents started through Claude Code's Agent tool, the normal orchestration workflow, run inside the orchestrator's container and are not isolated. `scripts/run-agent.ps1` (Windows) has not been updated for Enforcement Layer 1. Pass the role name as the first argument; any additional arguments are forwarded to the container.
 
 **macOS / Linux:**
 
@@ -457,7 +457,7 @@ docker run --rm -v "$PWD":/workspace agentic_engineer_4 \
 - `eval/test_policy.py` reads `.skills/*.md` for skill-scope enforcement. The `.skills/` directory is currently empty — add per-role skill scope files there as you build out the governance lesson content.
 - Tests that check directory structure (`.agents`, `.skills`, `docs/adr`, etc.) expect those directories to exist in the bind-mounted workspace. They are created automatically when the container runs without a bind-mount.
 - `scripts/run-reviewer.py` is a safe sample that does **not** call a live LLM. It writes a deterministic advisory review so the CI workflow can be exercised without API spend.
-- Runtime logs belong under `logs/` and are gitignored.
+- Containers started with `scripts/run-agent.sh` write runtime logs to the `agent-logs` Docker volume, mounted at `/logs`, not to the repository. `logs/` is not gitignored.
 - Configure branch protection so `Policy Test Suite`, `Evaluation Harness`, and `Pipeline Integrity Check` are required status checks before merge.
 
 ---
