@@ -47,10 +47,10 @@ not conflict with any near-miss pattern in the calibration log.
   - `docs/module3/calibration-log.md` records no near-miss patterns (`docs/module3/governance-risk-notes.md`, "Near-miss section status", lines 6–10). The preamble's pull-request check is therefore applied against findings B1–B5 in those risk notes.
   - No near-miss is claimed for MarketRadar.
   - The near-miss patterns in `docs/calibration-log.md` are Module 4 template material, not MarketRadar evidence, and are not cited here.
-- **Status:** these entries state policy intent. The storage and retrieval allow-lists match the MCP tables below and are enforced in server code (`_authorize`, `mcp-servers/storage/server.py` lines 61–68; `_retrieval_ceiling`, `mcp-servers/retrieval/server.py` lines 51–60), but no agent session can reach those servers yet (D2). Skill and tool grants are not yet enforced; see Deferred enforcement work. Container permissions are enforced only for containers started with `scripts/run-agent.sh`, as checked by `scripts/verify-container-permissions.sh`. Subagents started through the Claude Code Agent tool, which is the normal orchestration workflow, do not use the launcher: they run inside the Orchestrator's container and inherit its read-write workspace, environment and MCP configuration, so they have no container-level isolation (D15). Today:
+- **Status:** these entries state policy intent. The storage and retrieval allow-lists match the MCP tables below and are enforced in server code (`_authorize`, `mcp-servers/storage/server.py` lines 61–68; `_retrieval_ceiling`, `mcp-servers/retrieval/server.py` lines 51–60), but no agent session can reach those servers yet (D2). The `run-tests` skill activation scope is enforced by a PreToolUse hook (`scripts/enforce_skill_scope.py`, registered in `.claude/settings.json`); its decisions are tested deterministically in `eval/test_policy.py` but have not been observed in a live Claude Code session (D16). Other skill grants and tool grants are not yet enforced; see Deferred enforcement work. Container permissions are enforced only for containers started with `scripts/run-agent.sh`, as checked by `scripts/verify-container-permissions.sh`. Subagents started through the Claude Code Agent tool, which is the normal orchestration workflow, do not use the launcher: they run inside the Orchestrator's container and inherit its read-write workspace, environment and MCP configuration, so they have no container-level isolation (D15). Today:
   - the `mcp__storage__*` and `mcp__retrieval__*` tools named in `.claude/agents/*.md` are not connected to any configured MCP server. Only `slack` and `gmail` are configured, in the `/workspace` project entry of `/root/.claude.json`.
-  - no subagent holds the Skill tool.
-  - `run-tests` and `draft-pr-description` have no skill definitions. `skills/` defines only `check-gmail`, `rebuild-and-deploy`, `send-email`, `send-slack-message` and `summarize-session`.
+  - only the Tester holds the Skill tool (`.claude/agents/tester.md` line 4), for `run-tests` only.
+  - `run-tests` is defined in `.claude/skills/run-tests/SKILL.md`; `draft-pr-description` has no skill definition. `skills/` defines only `check-gmail`, `rebuild-and-deploy`, `send-email`, `send-slack-message` and `summarize-session`.
 - **Basis legend:**
   - **[B#]:** finding B1–B5 in `docs/module3/governance-risk-notes.md`.
   - **[LP]:** least-privilege default (preamble). The role has no task that needs the access.
@@ -60,6 +60,7 @@ not conflict with any near-miss pattern in the calibration log.
   - v1.1.2 (2026-11-05): Enforcement Layer 1 (container permissions): `run-agent.sh` line citations updated, `planner` launchable, D1 launcher part resolved; grants, allow-lists and role entries otherwise unchanged.
   - v1.1.3 (2026-11-05): `run-agent.sh` stores `/logs` in the named volume `agent-logs` instead of the repository; container permissions documented as launcher-only (D15); grants, allow-lists and role entries otherwise unchanged.
   - v1.2.0 (2026-11-05): Enforcement Layer 2 (MCP server allow-lists): storage and retrieval allow-lists aligned with the role tables (`planner` granted retrieval at `internal`; orchestrator retrieval denied); retrieval denials name the role and operation; successful retrievals are audited; the storage store defaults next to the audit log; D1 resolved, D3, D9 and D11 updated; grants and role entries otherwise unchanged.
+  - v1.3.0 (2026-11-09): Enforcement Layer 3 for `run-tests`: skill defined with an Activation Scope, Tester given the Skill tool for `run-tests` only, PreToolUse hook denies every other caller and audits outside the repository; D6 updated, D16 added; no grant changes other than giving the Tester the Skill tool, which puts its existing run-tests grant into effect.
 
 ### Documentation reconciliation notes
 
@@ -195,7 +196,7 @@ The Planner subagent does not hold the Skill tool (`planner.md` line 4).
 
 | Skill | Activation permitted | Reason / Basis |
 |---|---|---|
-| run-tests | YES (intent) | Running tests is the Tester's core duty (`tester.md` line 20). It cannot be activated today: the skill is not defined and the Tester has no Skill tool. A scoped `run-tests` skill is a candidate mitigation for B1 (D6). [Def] |
+| run-tests | YES (intent) | Running tests is the Tester's core duty (`tester.md` line 20). Defined in `.claude/skills/run-tests/SKILL.md`; the Tester holds the Skill tool and the hook allows it `run-tests` and no other skill. Runtime behaviour is tested deterministically only (D16). The Tester's Bash can still run tests without the skill (D5). [Def] |
 | draft-pr-description | NO | No workflow step asks the Tester to draft PRs. [LP] |
 | summarize-session | NO | The verification report is the Tester's output (`tester.md` lines 34–48). [LP] |
 | check-gmail | NO | No MarketRadar use; brings external personal data into context. [LP] |
@@ -220,6 +221,7 @@ The Planner subagent does not hold the Skill tool (`planner.md` line 4).
 | Tool | Granted | Reason / Basis |
 |---|---|---|
 | Read, Grep, Glob | YES | Needed to inspect changed files (`tester.md` line 19). [Def] |
+| Skill: `run-tests` only | YES | Needed to activate `run-tests`, which this policy grants under Skill activation scope. The hook `scripts/enforce_skill_scope.py` denies the Tester every other skill. [Def] |
 | Edit, Write | NO | "Do not modify, create, or delete source files" and "Do not fix failures yourself" (`tester.md` lines 22–23). [Def] |
 | Bash: validation commands only (`npm run test`, `npm run lint` and the type check, in `tracker-api/` and `tracker-client/`) | YES | Running tests needs process execution (`docs/module3/module-3-reflection.md` line 65). [Def] |
 | Bash: everything else, including redirection, `rm`, `sed -i`, git writes and package installs | NO | Unscoped shell access can change the workspace under verification. `no_source_writes` cannot see Bash writes (`calibration-log.md` lines 52–56; reflection lines 69–76 and 95). This scoping is not enforced today (D5). [B1] [B2] |
@@ -247,7 +249,7 @@ The Planner subagent does not hold the Skill tool (`planner.md` line 4).
 
 | Skill | Activation permitted | Reason / Basis |
 |---|---|---|
-| run-tests | NO | Read-only role; testing belongs to the Tester. The definition forbids commands that change repository or application state (`marketradar-code-reviewer.md` line 19). [Def] [LP] |
+| run-tests | NO | Read-only role; testing belongs to the Tester. The definition forbids commands that change repository or application state (`marketradar-code-reviewer.md` line 19). [Def] [LP] Enforced: the reviewer definition has no Skill tool, and the hook denies `run-tests` to any caller other than the Tester. Neither stops the reviewer's Bash (D4). |
 | draft-pr-description | NO | Review findings are the Reviewer's only output. [LP] |
 | summarize-session | NO | The review ends with its own overall assessment (`marketradar-code-reviewer.md` line 27). [LP] |
 | check-gmail | NO | No MarketRadar use; brings external personal data into context. [LP] |
@@ -349,7 +351,7 @@ The Planner subagent does not hold the Skill tool (`planner.md` line 4).
 
 | Skill | Activation permitted | Reason / Basis |
 |---|---|---|
-| run-tests | NO | Verification belongs to the Tester. The evaluation gate requires a Tester PASS (`CLAUDE.md` lines 240–242). [Def] |
+| run-tests | NO | Verification belongs to the Tester. The evaluation gate requires a Tester PASS (`CLAUDE.md` lines 240–242). [Def] Enforced by the hook, which denies `run-tests` in the main session (no `agent_type`). |
 | draft-pr-description | NO | No workflow step drafts PRs, and the skill is undefined. [LP] |
 | summarize-session | YES | A read-only, human-facing summary (`skills/summarize-session/SKILL.md`) used for completion and escalation reports (`CLAUDE.md` lines 213 and 216). [Def] |
 | check-gmail | NO | Brings external personal data into context; not part of the MarketRadar workflow. [LP] |
@@ -399,16 +401,17 @@ This section records gaps between this policy and the current configuration. No 
 | D3 | Allow-list part resolved (Module 4.1, Layer 2): `mcp-servers/storage/allow-list.json` and `mcp-servers/retrieval/allow-list.json` match the MCP tables in this policy, and `eval/test_policy.py` checks them against a hard-coded matrix. Remaining: the self-declared `calling_role` names in the agent definitions (`code-reviewer`, `project_manager`) still differ from the runtime names (`reviewer`, `project-manager`). The Module 4 servers authorize on `AGENT_ROLE` and ignore them. | Align the self-declared names with the runtime names when the agent bodies are updated (D2); agent definitions were out of scope for Layer 2. | [LP] |
 | D4 | `marketradar-code-reviewer` frontmatter still grants Bash (line 4). | Remove Bash. | [B3] |
 | D5 | Tester Bash is unscoped. | Scope it to the validation commands with command-scoped permission rules. | [B1] |
-| D6 | `no_source_writes` cannot detect writes made through Bash. | Detect Bash writes in the evaluator, for example with a working-tree diff. Optionally define a scoped `run-tests` skill. | [B2] [B1] |
+| D6 | `no_source_writes` cannot detect writes made through Bash. A scoped `run-tests` skill now exists (Layer 3), but skill scope does not cover Bash. | Detect Bash writes in the evaluator, for example with a working-tree diff. A scoped `run-tests` skill exists (Layer 3); detecting Bash writes remains open. | [B2] [B1] |
 | D7 | Retrieval is denied by permission mode for the Planner, Tester and Reviewer. | Explicitly allow `mcp__retrieval__retrieve` for those roles under their permission modes. | [B5] |
 | D8 | Direct Read of `.memory/reference/` can bypass the classification ceiling. | Deny direct Read of `.memory/reference/` files above the role's ceiling. | [B4] |
 | D9 | Fixed in the server (Module 4.1, Layer 2): when `STORAGE_STORE` is unset, the store defaults to the audit log's directory (`storage/server.py` line 32). Under `run-agent.sh` (`STORAGE_AUDIT_LOG=/logs/storage-audit-log.jsonl`, line 64) that is `/logs/storage-store.json` on the `agent-logs` volume, which stays writable when the workspace is read-only. Not yet exercised in a container, because the servers are not registered (D2). | Verify a `project-manager` `write_entry` in a launched container once D2 is resolved. | Configuration |
 | D10 | `slack` and `gmail` are configured for `/workspace` (`/root/.claude.json`) and inherited by the Orchestrator session. | Remove them, deny them, or scope them with permission rules for MarketRadar sessions. | [LP] |
-| D11 | Partly resolved (Module 4.1, Layer 2): `eval/test_policy.py` checks file existence, CI properties, and MCP allow-list authorization, the retrieval classification ceiling and audit records against a matrix hard-coded from the per-role MCP tables. It does not parse the per-role tables, so an unmatched policy edit is not detected, and it does not check skill scope. Container permissions are checked separately by `scripts/verify-container-permissions.sh`. No pre-commit hook is installed. | Add skill-scope checks once skills are defined; install or remove the hook claim. | Repository state |
+| D11 | Partly resolved (Module 4.1, Layers 2 and 3): `eval/test_policy.py` checks file existence, CI properties, and MCP allow-list authorization, the retrieval classification ceiling and audit records against a matrix hard-coded from the per-role MCP tables. It also checks the `run-tests` skill scope, the Skill tool holders, the skill-scope hook's decisions, container permissions via `scripts/run-agent.sh` with a fake docker, and that audit records carry the required fields. It still uses hard-coded matrices and does not parse the per-role tables, so an unmatched policy edit is not detected, and it does not check other skills' scope. `scripts/verify-container-permissions.sh` checks launched containers on the Docker host. No pre-commit hook is installed. | Add scope checks for other skills as they are defined; install or remove the hook claim. | Repository state |
 | D12 | `docs/routing-and-tool-grant-map.md` (lines 5–9) and `eval/red-team-*.md` describe the sample-role grants. | Update them after this policy is approved. | Repository state |
 | D13 | Implementer Edit/Write scoping is not enforced. The `tools:` line in `.claude/agents/implementer.md` (line 4) grants unrestricted Edit/Write. The approved-file-list limit comes only from the prompt instructions (`implementer.md` lines 20 and 24). | Enforce the scope with path-scoped permission rules or a review gate. | [LP] |
 | D14 | The Parent Orchestrator session holds Bash, Edit and Write because it runs as the main Claude Code session. This policy grants none of them, so they are denied by the least-privilege default, but nothing restricts them at runtime. | Restrict them with session permission rules, or document narrow read-only Bash exceptions through a PR. | [LP], `CLAUDE.md` role boundaries |
 | D15 | Subagents started through the Claude Code Agent tool (the normal orchestration workflow) do not use `scripts/run-agent.sh`. They run inside the Orchestrator's container and inherit its read-write workspace, environment and MCP configuration, so the container permissions in the role entries do not isolate them. The Orchestrator cannot start role containers itself without access to the Docker socket, which is denied. | Until a launch path that does not expose the Docker socket exists, in-process subagents are limited only by their `tools:` lists and permission rules (D4, D5, D13, D14). A role gets container-level isolation only when a human starts it with `scripts/run-agent.sh`. | Configuration |
+| D16 | Layer 3 runtime behaviour is unverified. The hook's decisions are tested deterministically (`eval/test_policy.py`) using the Skill tool's `skill` parameter and the documented `agent_type` field, but no hook input has been captured from a live Claude Code session. A human typing `/run-tests` bypasses PreToolUse. If `python3` is unavailable the hook errors and Claude Code may let the call proceed. Roles with a read-write workspace can edit the hook or `.claude/settings.json` (D13, D14). | Capture one live hook input for a Tester and a non-Tester Skill call and confirm `agent_type` and `tool_input.skill`. | Configuration |
 
 ## Policy maintenance
 
@@ -417,7 +420,7 @@ This section records gaps between this policy and the current configuration. No 
 - locally, on every commit that changes a governed file, through the pre-commit hook, and
 - on the shared repository, on every push and pull request, through CI.
 
-**Current status.** `eval/test_policy.py` checks file existence, CI properties and MCP allow-list behaviour against a hard-coded matrix, not the per-role tables themselves, and no pre-commit hook is installed in this repository (no `.pre-commit-config.yaml` or `.git/hooks/pre-commit`); see Deferred enforcement work.
+**Current status.** `eval/test_policy.py` checks file existence, CI properties, MCP allow-list behaviour, the `run-tests` skill scope, the Skill tool holders, the skill-scope hook's decisions, container permissions (via `scripts/run-agent.sh` with a fake docker) and the required fields of audit records. It uses hard-coded matrices, not the per-role tables themselves, and does not check other skills' scope. No pre-commit hook is installed in this repository (no `.pre-commit-config.yaml` or `.git/hooks/pre-commit`); see Deferred enforcement work.
 
 **Cadence.** Governed changes are checked as they happen. A scheduled full run should be added quarterly if the deployed environment can drift outside of commits.
 

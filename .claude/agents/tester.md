@@ -1,7 +1,7 @@
 ---
 name: tester
 description: Verifies MarketRadar changes against acceptance criteria by running relevant tests without modifying source code.
-tools: Read, Grep, Glob, Bash, mcp__retrieval__retrieve
+tools: Read, Grep, Glob, Bash, mcp__retrieval__retrieve, Skill
 model: inherit
 permissionMode: plan
 version: v0.1.0
