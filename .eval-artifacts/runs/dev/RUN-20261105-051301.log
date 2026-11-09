@@ -1,0 +1,5 @@
+{"timestamp": "2026-11-05T05:13:09.594541+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "decision-record-api-validation", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-05T05:13:09.594636+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "api-validation-rule-current", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-05T05:13:43.877510+00:00", "operation": "write_entry", "project_id": "default", "entry_id": "b3446b02-b1a0-42f4-8bf9-c34cc7537e85", "classification": "internal", "calling_role": "implementer"}
+{"timestamp": "2026-11-05T05:14:06.770355+00:00", "operation": "read_entry", "project_id": "api-validation-project", "entry_id": "b3446b02-b1a0-42f4-8bf9-c34cc7537e85", "classification": "internal", "calling_role": "tester"}
+{"timestamp": "2026-11-05T05:14:09.578405+00:00", "operation": "read_entry", "project_id": "api-validation-project", "entry_id": "b3446b02-b1a0-42f4-8bf9-c34cc7537e85", "classification": "internal", "calling_role": "tester"}

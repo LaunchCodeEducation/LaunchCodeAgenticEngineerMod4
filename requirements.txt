@@ -38,6 +38,9 @@ scikit-learn
 # rank-bm25: keyword-based BM25 fallback retrieval alongside vector search
 rank-bm25
 
+# sqlite-vec: SQLite vector extension used by the FashionMate retrieval MCP server (Module 3)
+sqlite-vec
+
 # --- Document ingestion helpers ---
 # markdown / beautifulsoup4: parse Markdown and HTML lesson docs for ingestion
 markdown

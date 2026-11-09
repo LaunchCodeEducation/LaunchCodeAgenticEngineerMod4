@@ -1,0 +1,6 @@
+{"timestamp": "2026-11-07T00:29:38.548758+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "incident-report-2024-q3.md", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-07T00:29:38.548875+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "postmortem-lessons.md", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-07T00:29:38.548954+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "api-design-guidelines.md", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-07T00:30:07.408154+00:00", "operation": "write_entry", "project_id": "default", "entry_id": "e95a7687-e385-4316-ad34-bdf397440c7f", "classification": "internal", "calling_role": "implementer"}
+{"timestamp": "2026-11-07T00:30:18.784158+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "e95a7687-e385-4316-ad34-bdf397440c7f", "classification": "internal", "calling_role": "reviewer"}
+{"timestamp": "2026-11-07T00:30:37.414447+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "e95a7687-e385-4316-ad34-bdf397440c7f", "classification": "internal", "calling_role": "tester"}

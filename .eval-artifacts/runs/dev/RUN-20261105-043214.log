@@ -1,0 +1,4 @@
+{"timestamp": "2026-11-05T04:32:22.429494+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "decision-record-api-validation", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-05T04:32:37.170855+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "decision-record-api-validation", "classification": "internal", "calling_role": "implementer"}
+{"timestamp": "2026-11-05T04:32:55.265571+00:00", "operation": "write_entry", "project_id": "default", "entry_id": "d207b513-c262-48de-93d4-72562ad8ac4d", "classification": "internal", "calling_role": "implementer"}
+{"timestamp": "2026-11-05T04:33:18.768825+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "d207b513-c262-48de-93d4-72562ad8ac4d", "classification": "internal", "calling_role": "tester"}

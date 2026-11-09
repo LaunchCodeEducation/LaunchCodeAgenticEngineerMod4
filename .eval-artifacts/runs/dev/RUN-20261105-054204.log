@@ -1,0 +1,12 @@
+{"timestamp": "2026-11-05T05:42:13.202986+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "decision-record-api-validation", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-05T05:42:13.203066+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "api-validation-rule", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-05T05:42:37.900257+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "decision-record-api-validation", "classification": "internal", "calling_role": "implementer"}
+{"timestamp": "2026-11-05T05:42:37.900408+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "api-validation-rule", "classification": "internal", "calling_role": "implementer"}
+{"timestamp": "2026-11-05T05:42:55.260089+00:00", "operation": "write_entry", "project_id": "default", "entry_id": "ab6db0df-d4c6-4974-af99-224a4fcf2894", "classification": "internal", "calling_role": "implementer"}
+{"timestamp": "2026-11-05T05:42:55.260179+00:00", "operation": "write_entry", "project_id": "default", "entry_id": "c8859cf4-6f86-45d9-8a1e-743e5921e856", "classification": "internal", "calling_role": "implementer"}
+{"timestamp": "2026-11-05T05:43:05.857773+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "ab6db0df-d4c6-4974-af99-224a4fcf2894", "classification": "internal", "calling_role": "reviewer"}
+{"timestamp": "2026-11-05T05:43:05.858408+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "c8859cf4-6f86-45d9-8a1e-743e5921e856", "classification": "internal", "calling_role": "reviewer"}
+{"timestamp": "2026-11-05T05:43:33.956341+00:00", "operation": "read_entry", "project_id": "api-validation", "entry_id": "decision-record", "classification": "internal", "calling_role": "tester"}
+{"timestamp": "2026-11-05T05:43:33.956402+00:00", "operation": "read_entry", "project_id": "api-validation", "entry_id": "decision-record-v2", "classification": "internal", "calling_role": "tester"}
+{"timestamp": "2026-11-05T05:43:36.744561+00:00", "operation": "read_entry", "project_id": "api-validation", "entry_id": "changelog", "classification": "internal", "calling_role": "tester"}
+{"timestamp": "2026-11-05T05:43:36.744843+00:00", "operation": "read_entry", "project_id": "api-validation", "entry_id": "implementation", "classification": "internal", "calling_role": "tester"}

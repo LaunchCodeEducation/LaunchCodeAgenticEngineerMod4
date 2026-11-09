@@ -1,0 +1,12 @@
+{
+  "DEV-01.json": {
+    "required_roles": true,
+    "role_order": true,
+    "similarity_floor": true
+  },
+  "DEV-02.json": {
+    "required_roles": true,
+    "role_order": true,
+    "retrieval_citations": true
+  }
+}

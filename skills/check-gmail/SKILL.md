@@ -1,6 +1,9 @@
-Retrieve and summarize recent unread Gmail messages using the Gmail MCP server.
+---
+name: check-gmail
+description: Retrieves and summarizes recent unread Gmail messages using the Gmail MCP server. Use when the user asks to check their email, review their inbox, or summarize unread messages.
+---
 
-Steps:
+## Steps
 1. Use the Gmail MCP server to fetch the most recent unread emails (up to 10).
 2. For each email, summarize:
    - Sender name and address

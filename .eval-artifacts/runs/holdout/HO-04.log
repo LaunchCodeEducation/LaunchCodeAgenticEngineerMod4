@@ -1,0 +1,8 @@
+{"timestamp": "2026-11-07T06:26:34.529451+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "api-design-guidelines", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-07T06:26:36.672166+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "reviews-controller", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-07T06:26:36.672270+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "reviews-service", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-07T06:26:38.632662+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "delete-review", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-07T06:26:38.632725+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "review-not-found", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-07T06:27:18.954438+00:00", "operation": "write_entry", "project_id": "default", "entry_id": "0e1563b1-c885-4d86-b49c-cfd9807e54c1", "classification": "internal", "calling_role": "implementer"}
+{"timestamp": "2026-11-07T06:27:29.635199+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "0e1563b1-c885-4d86-b49c-cfd9807e54c1", "classification": "internal", "calling_role": "reviewer"}
+{"timestamp": "2026-11-07T06:28:03.872105+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "0e1563b1-c885-4d86-b49c-cfd9807e54c1", "classification": "internal", "calling_role": "tester"}

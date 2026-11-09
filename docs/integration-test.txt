@@ -1,0 +1,82 @@
+Run a full integration test of the storage and retrieval MCP servers defined in
+/workspace/mcp/storage/server.py and /workspace/mcp/retrieval/server.py (schemas in
+mcp/storage/SCHEMA.md and mcp/retrieval/SCHEMA.md). Read the code and schemas first —
+treat the SCHEMA.md files as the intended contract and the server.py files as the
+source of truth if they disagree.
+
+Use the live MCP tools (mcp__storage__write_entry, read_entry, list_entries,
+update_entry, delete_entry; mcp__retrieval__retrieve) to actually exercise every
+tool — do not simulate results.
+
+Use project_id "proj-inttest" for all storage-only tests (isolated sandbox project).
+Use project_id "proj-csv" for retrieval tests (the real indexed corpus).
+
+Run every test below, and add any additional edge cases you find warranted after
+reading the code. For each test record: ID, description, the exact call made,
+expected outcome, actual outcome, and PASS/FAIL.
+
+STORAGE — write_entry
+S1. Write with classification=public → succeeds, returns entry_id.
+S2. Write with classification=internal → succeeds, returns entry_id.
+S3. Write with classification=confidential → rejected.
+S4. Write with classification=secret → rejected.
+S5. Write with an invalid classification string → rejected.
+S6. Write with an invalid project_id (e.g. "proj_inttest" or "proj inttest") → rejected.
+S7. Write with empty entry_type, empty title, and empty content (three separate calls) → each rejected.
+
+STORAGE — read_entry
+S8. Read back the entry from S1 → all fields match what was written, deleted=0.
+S9. Read a nonexistent entry_id → rejected.
+S10. Read the S1 entry_id under a different project_id → rejected (project scoping).
+
+STORAGE — list_entries
+S11. List proj-inttest → includes S1 and S2 entries, metadata only (no "content" key in results).
+S12. List proj-inttest filtered by entry_type → only matching entries returned.
+
+STORAGE — update_entry
+S13. Update the S1 entry's content → re-read confirms new content, unchanged classification.
+S14. Update a nonexistent entry_id → rejected.
+S15. Update with empty content → rejected.
+
+STORAGE — delete_entry
+S16. Delete the S2 entry → read_entry on it now fails, list_entries excludes it (soft delete).
+S17. Delete the same entry a second time → rejected (already deleted).
+S18. Delete a nonexistent entry_id → rejected.
+
+RETRIEVAL — retrieve
+R1. Query proj-csv with something answerable from the corpus (e.g. "What file format did
+    we choose for CSV export?") → non-empty results; each result has source_document,
+    chunk_index, excerpt, classification, similarity_score, retrieval_method.
+R2. Query a project with no corpus (e.g. "proj-inttest") → empty result list.
+R3. Query something likely answered by cost-breakdown.md (e.g. "what is the cost
+    breakdown / budget") at the default ceiling (internal) → cost-breakdown.md must
+    NEVER appear; every result's classification is public or internal only.
+R4. Same query as R3 with classification_ceiling="confidential" → cost-breakdown.md
+    may now appear if relevant; no result exceeds "confidential".
+R5. Call retrieve with top_k=0 and top_k=21 (two calls) → both rejected (valid range 1-20).
+R6. Call retrieve with an invalid classification_ceiling (e.g. "top-secret") → rejected.
+R7. Call retrieve with metadata_filters={"doc_type": "decision"} → only chunks from
+    decision-typed documents returned.
+R8. Call retrieve with metadata_filters={"author": "x"} (unsupported key) → rejected.
+R9. Call retrieve with an invalid project_id format → rejected.
+R10. Confirm every result returned anywhere above has non-null source_document and
+     chunk_index (citation completeness — check across R1/R4/R7 results).
+
+CROSS-SYSTEM INTEGRATION
+I1. Validation parity: call write_entry and retrieve with the same malformed
+    project_id (e.g. "bad_id!") and confirm both servers reject it the same way.
+I2. Write a new entry via write_entry into project_id "proj-csv" with a distinctive
+    title (e.g. "INTEGRATION-MARKER-9f3a"), then immediately call retrieve on
+    "proj-csv" searching for that marker text. Expect ZERO results, and explain why:
+    retrieval only indexes the static corpus in /memory/reference at server startup,
+    so storage writes do not automatically become retrievable. This test PASSES if
+    no results are returned — that's the correct, intentional boundary, not a bug.
+I3. Clean up: delete the proj-csv entry created in I2 via delete_entry, and delete
+    the proj-inttest test entries (S1/S2, and any surviving from S13/S16 state) so
+    no test data is left behind. Confirm via list_entries that proj-inttest is empty
+    (or back to its pre-test state) and that the proj-csv marker entry is soft-deleted.
+
+Report results as a single markdown table (ID | Description | Expected | Actual |
+Pass/Fail), grouped under "Storage", "Retrieval", and "Cross-System" headings, with
+a final summary line: total tests, passed, failed, and a short note on any surprising
+or spec-violating behavior you found while reading the code.

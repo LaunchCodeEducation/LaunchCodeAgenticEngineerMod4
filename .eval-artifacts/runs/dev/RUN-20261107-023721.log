@@ -1,0 +1,7 @@
+{"timestamp": "2026-11-07T02:37:25.073863+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "decision-record-api-validation", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-07T02:38:06.767303+00:00", "operation": "write_entry", "project_id": "default", "entry_id": "a526e1e5-4cab-4d1f-a166-aa138798b005", "classification": "internal", "calling_role": "implementer"}
+{"timestamp": "2026-11-07T02:38:06.769279+00:00", "operation": "delete_entry", "project_id": "default", "entry_id": "decision-record-api-validation", "classification": "internal", "calling_role": "implementer"}
+{"timestamp": "2026-11-07T02:38:17.846323+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "a526e1e5-4cab-4d1f-a166-aa138798b005", "classification": "internal", "calling_role": "reviewer"}
+{"timestamp": "2026-11-07T02:38:17.846899+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "decision-record-api-validation", "classification": "internal", "calling_role": "reviewer"}
+{"timestamp": "2026-11-07T02:38:43.848197+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "a526e1e5-4cab-4d1f-a166-aa138798b005", "classification": "internal", "calling_role": "tester"}
+{"timestamp": "2026-11-07T02:38:43.848593+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "decision-record-api-validation", "classification": "internal", "calling_role": "tester"}

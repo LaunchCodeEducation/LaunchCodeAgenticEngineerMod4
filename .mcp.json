@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "coursetools": {
+      "type": "stdio",
+      "command": "python",
+      "args": [
+        "/workspace/mcp/coursetools_server.py"
+      ],
+      "env": {}
+    }
+  }
+}

@@ -1,3 +1,35 @@
+# FashionMate Agentic Harness + CI/CD
+
+Target codebase: **FashionMate** (`swarnaburra/Unit-2-Project-Fashion-Mate`, Spring Boot + React).
+This repo is the Module 4 course infrastructure (governance, CI/CD, deterministic validation)
+with the FashionMate agentic harness from Modules 1–3 brought forward: orchestrator and
+subagents (`.claude/agents/`), evaluation harness and holdout set (`eval/`, `docs/holdout-task-set.md`),
+calibration record (`docs/calibration-log.md`), and memory/handoff templates (`.memory/`).
+
+### Quick start (Windows PowerShell)
+
+```powershell
+docker build -t agentic_engineer_4 .
+$env:OPENROUTER_API_KEY = "<your key>"   # needed by eval/orchestrator.py
+docker run -it --rm `
+  -e OPENROUTER_API_KEY `
+  -e SLACK_BOT_TOKEN= -e SLACK_TEAM_ID= `
+  -v claude-auth:/claude-auth `
+  -v "${PWD}:/workspace" `
+  -v "${PWD}/.memory:/memory" `
+  agentic_engineer_4
+```
+
+Inside the container:
+
+```bash
+claude                                   # orchestrator: instructions in CLAUDE.md
+python3 eval/orchestrator.py             # scripted multi-agent dev run
+python3 eval/test_deterministic.py <transcript.json>
+```
+
+---
+
 # Module 4.2 — LaunchCode Agentic Engineer (CI/CD)
 
 > **Note:** This repository covers **Module 4.2 (CI/CD) only.**

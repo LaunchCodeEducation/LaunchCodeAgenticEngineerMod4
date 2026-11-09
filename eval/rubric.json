@@ -1,0 +1,65 @@
+{
+  "overall_pass_threshold": 12,
+  "dimensions": [
+    {
+      "name": "correctness",
+      "description": "Does the final output do what the task asked, without errors or omissions?",
+      "pass_threshold": 3,
+      "levels": {
+        "1": "Does not address the task, or the result is broken.",
+        "2": "Addresses the task but with significant errors or missing pieces.",
+        "3": "Does what the task asked, with at most minor issues.",
+        "4": "Fully and correctly satisfies the task, with nothing missing."
+      },
+      "examples": {
+        "1": "Asked to reject empty emails; the code does not run.",
+        "4": "Asked to reject empty emails; empty and malformed addresses are refused and the change is tested."
+      }
+    },
+    {
+      "name": "task_adherence",
+      "description": "Did the run do what was asked, and only what was asked, without drifting into unrequested work?",
+      "pass_threshold": 3,
+      "levels": {
+        "1": "Pursued a different task than the one given.",
+        "2": "Addressed the task but added substantial unrequested changes.",
+        "3": "Stayed on task with only minor drift.",
+        "4": "Did precisely what was asked, no more and no less."
+      },
+      "examples": {
+        "1": "Asked to fix one parser; rewrote three unrelated modules.",
+        "4": "Asked to fix one parser; changed only that parser."
+      }
+    },
+    {
+      "name": "groundedness",
+      "description": "Are retrieved facts used accurately, with claims reflecting the cited sources rather than invented detail?",
+      "pass_threshold": 3,
+      "levels": {
+        "1": "Claims contradict or ignore the retrieved sources.",
+        "2": "Some claims are unsupported by any cited source.",
+        "3": "Claims are supported, with at most a minor stretch.",
+        "4": "Every claim traces cleanly to a cited source."
+      },
+      "examples": {
+        "1": "Cited a document, then stated the opposite of what it said.",
+        "4": "Summarized the cited lesson without adding anything not in it."
+      }
+    },
+    {
+      "name": "clarity",
+      "description": "Is the output organized and clear enough to act on without rework?",
+      "pass_threshold": 3,
+      "levels": {
+        "1": "Disorganized or confusing enough to be unusable.",
+        "2": "Understandable only with effort.",
+        "3": "Clear, with minor rough edges.",
+        "4": "Clear, well organized, and immediately actionable."
+      },
+      "examples": {
+        "1": "A plan with no discernible order of steps.",
+        "4": "A numbered plan a reader could follow without questions."
+      }
+    }
+  ]
+}

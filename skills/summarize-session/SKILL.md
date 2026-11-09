@@ -1,6 +1,9 @@
-Generate a concise bullet-point summary of the current work session.
+---
+name: summarize-session
+description: Generates a concise bullet-point summary of the current work session. Use when the user asks to summarize, wrap up, or recap the current session.
+---
 
-Include the following sections:
+Generate a concise bullet-point summary of the current work session, including the following sections:
 
 **What we worked on**
 - List the main tasks, features, or problems addressed this session.

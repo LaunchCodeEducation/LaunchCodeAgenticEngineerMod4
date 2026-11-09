@@ -12,7 +12,9 @@ ENV PYTHONUNBUFFERED=1 \
     # These dirs are created below; if /workspace is bind-mounted the host
     # directory will shadow them, but HF will re-create subdirs as needed.
     HF_HOME=/workspace/.cache/huggingface \
-    SENTENCE_TRANSFORMERS_HOME=/workspace/.cache/sentence-transformers
+    SENTENCE_TRANSFORMERS_HOME=/workspace/.cache/sentence-transformers \
+    HOST=0.0.0.0 \
+    CLIENT_PORT=8502
 
 # --- OS packages ---
 # Core tools (curl, git, etc.) plus Module 4.2 diagnostics/build dependencies:
@@ -63,6 +65,7 @@ import sklearn; \
 import pydantic; \
 import httpx; \
 import rank_bm25; \
+import sqlite_vec; \
 print('All Module 4.2 imports OK')"
 
 # --- Node/npm agent tooling ---
@@ -96,6 +99,11 @@ COPY skills/ /root/.claude/skills/
 
 RUN mkdir -p /root/.claude/agents
 COPY agents/ /root/.claude/agents/
+
+# Project (FashionMate harness): default Claude settings + status line from Module 3
+COPY settings.json /root/.claude/settings.json
+COPY statusline.sh /root/.claude/statusline.sh
+RUN chmod +x /root/.claude/statusline.sh
 
 # --- Module 4 workspace content ---
 # Copy source files into the image so the environment works without a bind-mount.
@@ -135,7 +143,13 @@ RUN mkdir -p \
     /workspace/schemas \
     /workspace/examples \
     /workspace/logs \
-    /workspace/tests
+    /workspace/tests \
+    /memory/reference
+
+# Project (FashionMate harness): bake the reference corpus into the image so the
+# retrieval server works without a bind-mount. Mounting -v "$PWD/.memory":/memory
+# at runtime shadows this with the live corpus.
+COPY .memory/reference/ /memory/reference/
 
 # --- Entrypoint ---
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh

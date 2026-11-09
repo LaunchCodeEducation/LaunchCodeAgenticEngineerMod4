@@ -1,0 +1,186 @@
+You are editing the Dockerfile for the Agentic Engineer course sandbox image.
+
+Goal:
+Expand the existing Docker image so it fully supports Module 3, Learning Objective 2: standing up MCP servers for persistent storage and vector retrieval, using Claude Code as the primary harness and OpenCode as a supported alternative.
+
+Important course context:
+- Modules 1–2 already use Claude Code, so Claude Code must remain the primary installed agent harness.
+- Students are provided Claude API keys.
+- OpenCode should remain installed as a supported alternative, but do not make it the primary path.
+- Assume this image is used by MOOC/certificate students who have completed one programming language before, but may not know Python deeply.
+- Prefer local, inspectable, low-friction tools. Avoid requiring hosted databases, cloud vector stores, or extra API keys.
+- Preserve the existing Dockerfile structure unless there is a clear reason to improve it.
+
+Current image:
+- Base image: python:3.12-slim
+- Already installs basic CLI tools, Node/npm, Claude Code, OpenCode, Slack/Gmail MCP servers, ngrok, Claude skills, Claude agents, and the entrypoint script.
+- It copies requirements.txt and runs pip install -r requirements.txt.
+
+Tasks:
+1. Update the Dockerfile so the image includes all OS packages needed for:
+   - Building Python packages with native extensions when needed
+   - Running SQLite-backed examples
+   - Running local HTTP/MCP test clients
+   - Debugging network/listening ports inside the container
+   - Editing and inspecting files from the shell
+
+   Add, at minimum, these apt packages if not already present:
+   - build-essential
+   - python3-dev
+   - sqlite3
+   - jq
+   - unzip
+   - less
+   - tree
+   - iproute2
+   - net-tools
+   - lsof
+   - dnsutils
+   - make
+
+   Keep apt installs in as few RUN layers as practical and continue removing /var/lib/apt/lists/*.
+
+2. Add Python packages needed for the Module 3.2 MCP storage and retrieval lesson.
+
+   The image must include:
+   - fastmcp
+   - mcp
+   - aiosqlite
+   - chromadb
+   - sentence-transformers
+   - scikit-learn
+   - numpy
+   - pandas
+   - pydantic
+   - python-dotenv
+   - httpx
+   - requests
+   - rich
+   - typer
+   - pytest
+
+   Prefer adding these to requirements.txt rather than installing them ad hoc in the Dockerfile, unless the repo convention clearly says otherwise.
+
+3. Add optional but useful retrieval/text-processing packages:
+   - rank-bm25
+   - markdown
+   - beautifulsoup4
+
+   These support keyword fallback, Markdown ingestion, and simple document parsing.
+
+4. Add verification commands during the Docker build, but keep them lightweight.
+
+   After pip install, add a RUN command that verifies imports for:
+   - fastmcp
+   - mcp
+   - aiosqlite
+   - chromadb
+   - sentence_transformers
+   - sklearn
+   - pydantic
+   - httpx
+   - rank_bm25
+
+   The verification should fail the build if imports fail.
+
+5. Add or preserve Node/npm-based agent tooling.
+
+   Keep Claude Code installed globally:
+   - @anthropic-ai/claude-code
+
+   Keep OpenCode installed globally if the current npm package name is valid:
+   - opencode-ai
+
+   Add a build-time verification step that prints versions where possible:
+   - node --version
+   - npm --version
+   - claude --version, or a safe fallback if the command does not support --version
+   - opencode --version, or a safe fallback if the command does not support --version
+
+   Do not break the build just because a CLI version command is unavailable, but do fail the build if npm install itself fails.
+
+6. Add directories expected by the Module 3.2 lesson.
+
+   Ensure the image contains or creates:
+   - /workspace
+   - /workspace/mcp-servers
+   - /workspace/mcp-servers/storage
+   - /workspace/mcp-servers/retrieval
+   - /workspace/.memory
+   - /workspace/.memory/reference
+   - /workspace/docs
+   - /workspace/tests
+   - /root/.claude
+   - /root/.claude/skills
+   - /root/.claude/agents
+
+   Be careful: because /workspace may be bind-mounted by students, do not rely on files baked into /workspace being visible at runtime. It is okay to create directories, but lesson starter files should probably live in the course repo rather than only inside the image.
+
+7. Improve shell quality-of-life for learners.
+
+   Preserve the existing aliases, and add helpful aliases if appropriate:
+   - alias py="python3"
+   - alias ports="lsof -i -P -n"
+   - alias mcp-servers="find /workspace/mcp-servers -maxdepth 3 -type f | sort"
+
+   Keep the prompt clear and course-specific.
+
+8. Add environment variables useful for Python and local models.
+
+   Add:
+   - PYTHONUNBUFFERED=1
+   - PYTHONDONTWRITEBYTECODE=1
+   - PIP_NO_CACHE_DIR=1
+   - HF_HOME=/workspace/.cache/huggingface
+   - SENTENCE_TRANSFORMERS_HOME=/workspace/.cache/sentence-transformers
+
+   Also create those cache directories. Because /workspace may be bind-mounted, make sure this does not make the image fragile.
+
+9. Consider model pre-download, but do not require it unless practical.
+
+   Preferred behavior:
+   - Do not force a large model download during Docker build unless it is small and reliable.
+   - If you choose to pre-download all-MiniLM-L6-v2, make it clear in a comment and keep it optional/easy to remove.
+   - The lesson should still work if the first run downloads the model, assuming the learner has network access during setup.
+
+10. Keep security/sandboxing assumptions intact.
+
+   Do not add SSH servers.
+   Do not expose ports with EXPOSE unless the existing course pattern requires it.
+   Do not bake API keys or secrets into the image.
+   Do not add cloud credentials.
+   Do not weaken the entrypoint.
+   Do not remove the existing Claude skills/agents copy behavior.
+
+11. Add comments to the Dockerfile explaining why the Module 3.2 packages are present.
+
+   The comments should mention:
+   - FastMCP/MCP for local MCP server development
+   - SQLite/aiosqlite for persistent storage
+   - ChromaDB/Sentence Transformers for local vector retrieval
+   - rank-bm25 for keyword fallback
+   - pytest/httpx/jq/tree/lsof for testing and diagnostics
+
+12. After editing, provide a concise summary of:
+   - What changed in Dockerfile
+   - What changed in requirements.txt
+   - Any assumptions you made
+   - The exact docker build command to test it
+   - The exact commands to run inside the container to verify:
+     - Claude Code is installed
+     - OpenCode is installed
+     - FastMCP imports
+     - ChromaDB imports
+     - Sentence Transformers imports
+     - SQLite works
+     - jq/tree/lsof are present
+
+Acceptance criteria:
+- Docker build succeeds.
+- Claude Code remains installed and primary.
+- OpenCode remains installed as supported alternative.
+- Python imports for fastmcp, mcp, aiosqlite, chromadb, sentence_transformers, sklearn, pydantic, httpx, and rank_bm25 succeed.
+- sqlite3 CLI is available.
+- jq, tree, and lsof are available.
+- No secrets are added to the image.
+- The existing entrypoint and Claude skills/agents behavior are preserved.

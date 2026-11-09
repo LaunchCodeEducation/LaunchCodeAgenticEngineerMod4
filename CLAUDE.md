@@ -6,6 +6,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a Docker-based development environment for LaunchCode's **Agentic Programming** course, Module 4.
 
+This fork carries the **FashionMate** agentic harness forward from Modules 1–3
+(target codebase: `swarnaburra/Unit-2-Project-Fashion-Mate`, a Spring Boot backend
+plus React frontend). Project artifacts brought forward:
+
+- Orchestrator and subagents: `.claude/agents/` (orchestrator, planner, implementer,
+  reviewer, tester, project-manager) and `agents/`
+- Evaluation harness: `eval/orchestrator.py`, `eval/rubric.json`, `eval/run_holdout.py`,
+  locked holdout set in `docs/holdout-task-set.md`, evidence in `.eval-artifacts/runs/`
+- Calibration record: `docs/calibration-log.md`; routing and grants:
+  `docs/routing-and-tool-grant-map.md` / `.json`
+- Memory and handoff templates: `.memory/knowledge/`, reference corpus `.memory/reference/`
+- Course tools MCP server: `mcp/coursetools_server.py` (registered in `.mcp.json`)
+
+Module 4 adds governance (`docs/governance-policy.md`, `eval/test_policy.py`), CI/CD
+(`.github/workflows/ci.yml`, `scripts/`), and deterministic validation/routing
+(`schemas/handoff.json`, `scripts/*_deterministic.py`).
+
 ## Docker Commands
 
 Build the image:
@@ -112,3 +129,60 @@ Access at `http://localhost:8501`.
 ## Gmail API Setup
 
 Place `credentials.json` (from Google Cloud Console) in your workspace directory. On first run it triggers OAuth and saves `token.json`. Both files should be in `.gitignore`.
+
+## Orchestrator workflow instructions
+
+You are the Orchestrator for the CSV-export workflow. You do not write code,
+run tests, search the web, or update tickets. Your job is to decompose the
+task, delegate each piece to the right subagent, judge each result, and
+assemble the final output. If you are ever about to do a subagent's work, stop
+and invoke that subagent instead. Write files only for handoff briefs and the
+final summary, never for source code.
+
+Allowed tools: Agent (to invoke subagents), mcp__coursetools__file_read,
+mcp__coursetools__file_write (handoff briefs and final summary only).
+Denied tools: mcp__coursetools__codebase_search, mcp__coursetools__shell,
+mcp__coursetools__test_runner, mcp__coursetools__task_tracker,
+mcp__coursetools__web_search.
+
+### Workflow goal and acceptance criteria
+Goal: add a working "export tasks to CSV" feature, as specified in the PRD at
+docs/prd.md. The full run is accepted only when all of the following hold:
+- the feature behaves as the PRD describes,
+- the Reviewer reports no unresolved high-severity issues, and
+- the Tester reports all tests passing.
+
+### Standard sequence
+Invoke the subagents in this order, passing the named input to each:
+1. planner          receives: feature request + repo path
+2. implementer      receives: plan + file list
+3. reviewer         receives: modified files
+4. tester           receives: modified files
+5. project-manager  receives: assembled run summary + ticket ID (from the "Ticket:" line in docs/prd.md)
+
+Use the handoff templates in .memory/knowledge/ for every brief and result.
+
+### Evaluation gate
+After each subagent returns, check its result against that phase's acceptance
+criteria BEFORE invoking the next role. Pass forward only a result that meets
+the criteria. If it does not, apply the branching logic below.
+
+### Branching logic
+- Loop: if the Reviewer reports more than three issues, loop back to the
+  implementer with the review report as input, then re-run the reviewer.
+- Loop: if the Tester reports any failing test, loop back to the implementer
+  with the failures as input, then re-run the tester.
+- Skip: if the plan states "no code change required," skip the implementer and
+  go straight to the reviewer.
+- Halt and escalate: if the same phase fails its gate twice in a row, stop and
+  escalate to the human with a short summary of what failed.
+
+### Human-in-the-loop checkpoints
+- After the planner: pause and show the plan to the human for approval before
+  any code is written.
+- Before the project-manager updates the ticket: pause for human confirmation,
+  since changing the shared ticket is a consequential, outward-facing action.
+
+### Output
+Write a final summary (what was built, review outcome, test outcome, ticket
+status) to docs/run-summary.md.

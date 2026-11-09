@@ -1,0 +1,6 @@
+{"timestamp": "2026-11-07T06:24:08.827402+00:00", "operation": "read_entry", "project_id": "proj_001", "entry_id": "user-model", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-07T06:24:08.827484+00:00", "operation": "read_entry", "project_id": "proj_001", "entry_id": "api-design-guidelines", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-07T06:24:08.827536+00:00", "operation": "read_entry", "project_id": "proj_001", "entry_id": "decision-record", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-07T06:24:11.388930+00:00", "operation": "read_entry", "project_id": "proj_001", "entry_id": "security-guidelines", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-07T06:24:11.389028+00:00", "operation": "read_entry", "project_id": "proj_001", "entry_id": "password-handling", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-07T06:24:59.909690+00:00", "operation": "write_entry", "project_id": "default", "entry_id": "07921a2d-7993-43b0-a6db-db4a09055526", "classification": "internal", "calling_role": "implementer"}

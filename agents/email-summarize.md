@@ -3,7 +3,6 @@ name: email-summarize
 description: >
   Checks new Gmail messages and posts a summary to the #test Slack channel.
   Use when asked to summarize email or send email summaries to Slack.
-tools: Bash
 model: inherit
 permissionMode: default
 ---

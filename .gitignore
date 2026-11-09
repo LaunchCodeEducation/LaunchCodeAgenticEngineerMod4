@@ -1,4 +1,14 @@
-ci-artifacts/ 
+# --- Project (FashionMate harness, from Module 3) ---
+# Live storage data and secrets never go in git
+.memory/storage.db
+.memory/storage-audit.log
+token.json
+credentials*.json
+google_cred.json
+.cache/
+
+# --- Module 4 ---
+ci-artifacts/
 ci-out/ 
 ci-reports/ 
 ci-audit-trail-*.json 
@@ -222,3 +232,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- Project: keep evaluation evidence (must come after *.log above) ---
+!.eval-artifacts/**/*.log

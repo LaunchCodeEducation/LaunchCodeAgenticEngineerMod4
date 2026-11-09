@@ -1,0 +1,8 @@
+{"timestamp": "2026-11-07T05:41:32.147050+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "decision-record-api-validation", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-07T05:41:57.752443+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "decision-record-api-validation", "classification": "internal", "calling_role": "implementer"}
+{"timestamp": "2026-11-07T05:42:16.760167+00:00", "operation": "write_entry", "project_id": "default", "entry_id": "c784ce9c-80a4-4c5b-9439-f463dc473bbc", "classification": "internal", "calling_role": "implementer"}
+{"timestamp": "2026-11-07T05:42:16.760251+00:00", "operation": "delete_entry", "project_id": "default", "entry_id": "decision-record-api-validation", "classification": "internal", "calling_role": "implementer"}
+{"timestamp": "2026-11-07T05:42:26.770388+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "c784ce9c-80a4-4c5b-9439-f463dc473bbc", "classification": "internal", "calling_role": "reviewer"}
+{"timestamp": "2026-11-07T05:42:26.770882+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "decision-record-api-validation", "classification": "internal", "calling_role": "reviewer"}
+{"timestamp": "2026-11-07T05:42:54.458326+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "c784ce9c-80a4-4c5b-9439-f463dc473bbc", "classification": "internal", "calling_role": "tester"}
+{"timestamp": "2026-11-07T05:42:54.458545+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "decision-record-api-validation", "classification": "internal", "calling_role": "tester"}
