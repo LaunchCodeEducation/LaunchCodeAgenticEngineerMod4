@@ -52,11 +52,12 @@ MODEL = "anthropic/claude-sonnet-4.6"
 # ── tool grant map (mirrors docs/routing-and-tool-grant-map.json) ─────────────
 
 GRANT_MAP: dict[str, list[str]] = {
-    "project_manager": ["write_entry", "read_entry", "list_entries"],
-    "planner": ["retrieve", "read_entry"],
-    "implementer": ["write_entry", "read_entry", "retrieve"],
-    "reviewer": ["read_entry", "retrieve"],
-    "tester": ["read_entry"],
+    # Aligned with docs/governance-policy.md (2026-11-09)
+    "project_manager": ["read_entry", "list_entries"],
+    "planner": ["read_entry", "list_entries", "retrieve"],
+    "implementer": ["write_entry", "read_entry", "list_entries", "update_entry", "retrieve"],
+    "reviewer": ["read_entry", "list_entries", "retrieve"],
+    "tester": ["read_entry", "list_entries", "retrieve"],
 }
 
 # ── Anthropic tool schemas ────────────────────────────────────────────────────

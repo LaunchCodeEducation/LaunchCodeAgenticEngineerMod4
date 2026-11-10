@@ -18,191 +18,250 @@ This policy is derived from:
 Every role starts with no access. All grants below are explicit and justified. Any access not explicitly granted to a role is denied by default.
 
 To widen access, open a pull request with: the proposed grant, a concrete justification, and confirmation that the grant does not conflict with any near-miss pattern in the calibration log.
+Near-miss references below point to `docs/calibration-log.md`, section "Near-miss patterns for Module 4 governance", and to the matching risk statements in `docs/near-miss-risks.md`. Denials without a near-miss reference stand on least-privilege grounds: the role's defined job does not need the operation.
 
-## Role: implementer
+Roles in this orchestration (6): orchestrator, planner, implementer, reviewer, tester, project-manager.
 
-**Version:** v1.0.0  
-**Defined in:** `.agents/implementer.md`
+## Role: orchestrator
+
+**Version:** v1.0.0
+**Defined in:** .claude/agents/orchestrator.md
 
 ### MCP server and operation access
 
-| Operation | Server | Granted | Justification / Denial reason |
-|---|---|---|---|
-| write_entry | storage | YES | Implementer must record decisions. |
-| read_entry | storage | YES | Implementer reads prior decisions. |
-| list_entries | storage | YES | Implementer checks existing state. |
-| update_entry | storage | YES | Implementer updates state after changes. |
-| delete_entry | storage | NO | Implementer must not remove project state (calibration-log.md, near-miss: implementer over-broad delete grant). |
-| audit_read | storage | NO | Audit inspection is owned by the orchestrator. |
-| retrieve | retrieval | YES | Implementer retrieves reference documents for implementation context. |
+| Operation     | Server    | Granted | Justification / Denial reason |
+|---------------|-----------|---------|-------------------------------|
+| read_entry    | storage   | YES     | Orchestrator reads subagent results to judge each phase gate |
+| list_entries  | storage   | YES     | Orchestrator checks what state exists before delegating |
+| write_entry   | storage   | YES     | Orchestrator records handoff briefs and the final run summary |
+| update_entry  | storage   | YES     | Orchestrator updates the run record as phases pass or fail |
+| delete_entry  | storage   | YES     | Orchestrator is the only role that manages entry lifecycle (e.g. removing a superseded record). Requires a human checkpoint (see Autonomy). This is the only role with delete, closing the over-broad grant risk for every other role (calibration-log.md, near-miss: over-broad grant only caught because a task asked for a delete) |
+| audit_read    | storage   | YES     | Orchestrator must inspect denied operations in the audit log to detect policy violations |
+| retrieve      | retrieval | YES     | Orchestrator retrieves reference docs to brief subagents; ceiling confidential |
 
 ### Skill activation scope
 
-| Skill | Activation permitted | Reason if denied |
-|---|---|---|
-| run-tests | YES | Core implementer responsibility. |
-| draft-pr-description | NO | Owned by project-manager role. |
-| summarize-session | YES | Implementer may summarize its own work. |
+| Skill                | Activation permitted | Reason if denied |
+|----------------------|----------------------|------------------|
+| run-tests            | NO                   | Owned by implementer and tester; the orchestrator delegates and never does subagent work (CLAUDE.md) |
+| draft-pr-description | NO                   | Owned by project-manager role |
+| summarize-session    | YES                  | Orchestrator summarizes the run into docs/run-summary.md |
+| rebuild-and-deploy   | YES                  | Only with a human checkpoint; deploy is outward-facing |
+| send-slack-message   | NO                   | External communication is owned by project-manager |
+| send-email           | NO                   | External communication is owned by project-manager |
+| check-gmail          | NO                   | Not needed to coordinate the workflow |
 
 ### Data classification ceiling
 
-**Maximum level:** internal  
+**Maximum level:** confidential
+**Reason:** The orchestrator coordinates all roles and may need confidential context to route work correctly; it never forwards confidential material to roles capped at internal. No role is granted secret.
+
+### Autonomy level
+
+**Level:** medium
+**Conditions for human checkpoint:** After the planner returns (plan approval); before the project-manager updates the ticket; before any delete_entry; before rebuild-and-deploy; whenever two reviewers return conflicting verdicts on the same section, the orchestrator must escalate instead of choosing one (calibration-log.md, near-miss: conflicting reviewers rarely exercised); a run may not be reported as passing on deterministic checks alone when the rubric suite has not run (calibration-log.md, near-miss: first dev run passed 14/14 deterministic but scored 0/5 on the rubric).
+**Reason:** Coordination is reversible inside the container, but lifecycle, publication, and approval decisions need human accountability.
+
+## Role: planner
+
+**Version:** v1.0.0
+**Defined in:** .claude/agents/planner.md
+
+### MCP server and operation access
+
+| Operation     | Server    | Granted | Justification / Denial reason |
+|---------------|-----------|---------|-------------------------------|
+| read_entry    | storage   | YES     | Planner reads prior decisions before planning |
+| list_entries  | storage   | YES     | Planner checks existing project state |
+| write_entry   | storage   | NO      | Planner produces a plan in its handoff, not in project state; the orchestrator records it |
+| update_entry  | storage   | NO      | Planner must not change project state |
+| delete_entry  | storage   | NO      | Planner must not remove project state (calibration-log.md, near-miss: over-broad grant) |
+| retrieve      | retrieval | YES     | Planner must ground the plan in retrieved reference docs; ceiling internal |
+
+### Skill activation scope
+
+| Skill                | Activation permitted | Reason if denied |
+|----------------------|----------------------|------------------|
+| run-tests            | NO                   | Planner does not execute code |
+| draft-pr-description | NO                   | Owned by project-manager role |
+| summarize-session    | YES                  | Planner may summarize its own work |
+| rebuild-and-deploy   | NO                   | Outward-facing; orchestrator only, with checkpoint |
+| send-slack-message   | NO                   | External communication is owned by project-manager |
+| send-email           | NO                   | External communication is owned by project-manager |
+| check-gmail          | NO                   | Not needed for planning |
+
+### Data classification ceiling
+
+**Maximum level:** internal
+**Reason:** Planning uses internal project docs and lessons; it does not need confidential data.
+
+### Autonomy level
+
+**Level:** low
+**Conditions for human checkpoint:** Every plan is shown to the human for approval before any code is written (CLAUDE.md human-in-the-loop checkpoint). The planner works only from its scoped handoff and may not rely on private context from other roles (calibration-log.md, near-miss: context bleed only checked when a canary is planted).
+**Reason:** A wrong plan propagates into every later phase, so it is reviewed before work begins.
+
+## Role: implementer
+
+**Version:** v1.0.0
+**Defined in:** .claude/agents/implementer.md
+
+### MCP server and operation access
+
+| Operation     | Server    | Granted | Justification / Denial reason |
+|---------------|-----------|---------|-------------------------------|
+| write_entry   | storage   | YES     | Implementer must record decisions |
+| read_entry    | storage   | YES     | Implementer reads prior decisions |
+| list_entries  | storage   | YES     | Implementer checks existing state |
+| update_entry  | storage   | YES     | Implementer updates state after changes |
+| delete_entry  | storage   | NO      | Implementer must not remove project state (calibration-log.md, near-miss: implementer over-broad delete grant, cycle 6, fix 034729f) |
+| retrieve      | retrieval | YES     | Implementer retrieves reference docs; ceiling internal |
+
+### Skill activation scope
+
+| Skill                | Activation permitted | Reason if denied |
+|----------------------|----------------------|------------------|
+| run-tests            | YES                  | Core implementer responsibility |
+| draft-pr-description | NO                   | Owned by project-manager role |
+| summarize-session    | YES                  | Implementer may summarize its own work |
+| rebuild-and-deploy   | NO                   | Outward-facing; orchestrator only, with checkpoint |
+| send-slack-message   | NO                   | External communication is owned by project-manager |
+| send-email           | NO                   | External communication is owned by project-manager |
+| check-gmail          | NO                   | Not needed for implementation |
+
+### Data classification ceiling
+
+**Maximum level:** internal
 **Reason:** Implementer does not require confidential data to perform implementation tasks.
 
 ### Autonomy level
 
-**Level:** medium  
-**Conditions for human checkpoint:** Before running shell commands outside the test suite; before writing to any file outside the current feature branch scope.  
-**Reason:** Implementation is reversible within the container; shell commands outside the test suite are higher risk.  
-**Container permissions:** workspace read-write, memory mounted
+**Level:** medium
+**Conditions for human checkpoint:** Before running any shell command outside the test suite; before writing to any file not in the current feature branch scope.
+**Reason:** Implementation is reversible within the container; shell commands outside the test suite are higher risk.
 
 ## Role: reviewer
 
-**Version:** v1.0.0  
-**Defined in:** `.agents/reviewer.md`
+**Version:** v1.0.0
+**Defined in:** .claude/agents/reviewer.md
 
 ### MCP server and operation access
 
-| Operation | Server | Granted | Justification / Denial reason |
-|---|---|---|---|
-| read_entry | storage | YES | Reviewer reads decisions to review them. |
-| list_entries | storage | YES | Reviewer checks what exists before reviewing. |
-| write_entry | storage | NO | Reviewer must not change project state. |
-| update_entry | storage | NO | Reviewer must not change project state. |
-| delete_entry | storage | NO | Reviewer must not remove project state. |
-| audit_read | storage | NO | Audit inspection is owned by the orchestrator. |
-| retrieve | retrieval | YES | Reviewer retrieves reference documents for context. |
+| Operation     | Server    | Granted | Justification / Denial reason |
+|---------------|-----------|---------|-------------------------------|
+| read_entry    | storage   | YES     | Reviewer reads decisions to review them |
+| list_entries  | storage   | YES     | Reviewer checks what exists before reviewing |
+| write_entry   | storage   | NO      | Reviewer must not change project state |
+| update_entry  | storage   | NO      | Reviewer must not change project state |
+| delete_entry  | storage   | NO      | Reviewer must not remove project state (calibration-log.md, near-miss: over-broad grant) |
+| retrieve      | retrieval | YES     | Reviewer retrieves reference docs for context; ceiling internal |
 
 ### Skill activation scope
 
-| Skill | Activation permitted | Reason if denied |
-|---|---|---|
-| run-tests | NO | Reviewer is read-only; running tests changes workspace state (calibration-log.md, near-miss: reviewer near-triggered run-tests). |
-| draft-pr-description | NO | Owned by project-manager role. |
-| summarize-session | YES | Reviewer may summarize its own review. |
+| Skill                | Activation permitted | Reason if denied |
+|----------------------|----------------------|------------------|
+| run-tests            | NO                   | Reviewer is read-only; running tests changes workspace state |
+| draft-pr-description | NO                   | Owned by project-manager role |
+| summarize-session    | YES                  | Reviewer may summarize its own review |
+| rebuild-and-deploy   | NO                   | Outward-facing; orchestrator only, with checkpoint |
+| send-slack-message   | NO                   | External communication is owned by project-manager |
+| send-email           | NO                   | External communication is owned by project-manager |
+| check-gmail          | NO                   | Not needed for review |
 
 ### Data classification ceiling
 
-**Maximum level:** internal  
+**Maximum level:** internal
 **Reason:** Reviewer does not require confidential data to review internal work.
 
 ### Autonomy level
 
-**Level:** low  
-**Conditions for human checkpoint:** Reviewer output is advisory only; it may not apply any change. Any action beyond producing review findings requires escalation to the orchestrator.  
-**Reason:** A review role that can change state can quietly alter the work it is supposed to inspect independently.  
-**Container permissions:** workspace read-only, memory omitted
+**Level:** low
+**Conditions for human checkpoint:** Reviewer output is advisory only; it may not apply any change. Any action beyond producing review findings requires escalation to the orchestrator. When parallel reviewers disagree, the reviewer reports its verdict and the orchestrator escalates to a human (calibration-log.md, near-miss: conflicting reviewers).
+**Reason:** A review role that can change state can quietly alter the very work it is supposed to inspect independently.
 
 ## Role: tester
 
-**Version:** v1.0.0  
-**Defined in:** `.agents/tester.md`
+**Version:** v1.0.0
+**Defined in:** .claude/agents/tester.md
 
 ### MCP server and operation access
 
-| Operation | Server | Granted | Justification / Denial reason |
-|---|---|---|---|
-| read_entry | storage | YES | Tester reads decisions and test context. |
-| list_entries | storage | YES | Tester lists available state before reporting. |
-| write_entry | storage | NO | Tester reports results but does not change stored project state. |
-| update_entry | storage | NO | Tester reports results but does not update stored project state. |
-| delete_entry | storage | NO | Tester must not remove project state. |
-| audit_read | storage | NO | Audit inspection is owned by the orchestrator. |
-| retrieve | retrieval | YES | Tester retrieves internal references for test context. |
+| Operation     | Server    | Granted | Justification / Denial reason |
+|---------------|-----------|---------|-------------------------------|
+| read_entry    | storage   | YES     | Tester reads the implementation entry it verifies |
+| list_entries  | storage   | YES     | Tester checks which entries exist for the run |
+| write_entry   | storage   | NO      | Tester reports results in its handoff; it must not change project state |
+| update_entry  | storage   | NO      | Tester must not change project state |
+| delete_entry  | storage   | NO      | Tester must not remove project state (calibration-log.md, near-miss: over-broad grant) |
+| retrieve      | retrieval | YES     | Tester retrieves the standards it verifies against; ceiling internal |
 
 ### Skill activation scope
 
-| Skill | Activation permitted | Reason if denied |
-|---|---|---|
-| run-tests | YES | Core tester responsibility. |
-| draft-pr-description | NO | Owned by project-manager role. |
-| summarize-session | YES | Tester may summarize its own work. |
+| Skill                | Activation permitted | Reason if denied |
+|----------------------|----------------------|------------------|
+| run-tests            | YES                  | Core tester responsibility |
+| draft-pr-description | NO                   | Owned by project-manager role |
+| summarize-session    | YES                  | Tester may summarize its own results |
+| rebuild-and-deploy   | NO                   | Outward-facing; orchestrator only, with checkpoint |
+| send-slack-message   | NO                   | External communication is owned by project-manager |
+| send-email           | NO                   | External communication is owned by project-manager |
+| check-gmail          | NO                   | Not needed for testing |
 
 ### Data classification ceiling
 
-**Maximum level:** internal  
-**Reason:** Tester does not require confidential data to run or report tests.
+**Maximum level:** internal
+**Reason:** Testing internal features does not require confidential data.
 
 ### Autonomy level
 
-**Level:** low  
-**Conditions for human checkpoint:** Any write to tracked repository files or stored project state.  
-**Reason:** Testing should inspect and report without altering source-controlled files.  
-**Container permissions:** workspace read-only, memory omitted
+**Level:** medium
+**Conditions for human checkpoint:** Tester may run the test suite without approval; any command outside the test suite, or any change to test fixtures, requires escalation to the orchestrator.
+**Reason:** Running tests is reversible and is the tester's job; altering what is tested would undermine the result.
 
 ## Role: project-manager
 
-**Version:** v1.0.0  
-**Defined in:** `.agents/project-manager.md`
+**Version:** v1.0.0
+**Defined in:** .claude/agents/project-manager.md
 
 ### MCP server and operation access
 
-| Operation | Server | Granted | Justification / Denial reason |
-|---|---|---|---|
-| read_entry | storage | YES | Project-manager reads project state for summaries. |
-| list_entries | storage | YES | Project-manager lists state before drafting descriptions. |
-| write_entry | storage | NO | Project-manager does not update project state directly. |
-| update_entry | storage | NO | Project-manager does not update project state directly. |
-| delete_entry | storage | NO | Project-manager must not remove project state. |
-| audit_read | storage | NO | Audit inspection is owned by the orchestrator. |
-| retrieve | retrieval | NO | Project-manager does not perform retrieval in this sample workflow. |
+| Operation     | Server    | Granted | Justification / Denial reason |
+|---------------|-----------|---------|-------------------------------|
+| read_entry    | storage   | YES     | Project manager reads the run results it reports on |
+| list_entries  | storage   | YES     | Project manager checks what the run produced |
+| write_entry   | storage   | NO      | Project manager reports through the ticket and run summary, not project state. Resolves a conflict with the earlier grant map, which granted write_entry; the map was corrected (see below) |
+| update_entry  | storage   | NO      | Project manager must not change project state |
+| delete_entry  | storage   | NO      | Project manager must not remove project state (calibration-log.md, near-miss: over-broad grant) |
+| retrieve      | retrieval | NO      | Project manager does not perform retrieval |
 
 ### Skill activation scope
 
-| Skill | Activation permitted | Reason if denied |
-|---|---|---|
-| run-tests | NO | Planning and description work does not run tests. |
-| draft-pr-description | YES | Project-manager owns pull-request descriptions. |
-| summarize-session | YES | Project-manager may summarize its own work. |
+| Skill                | Activation permitted | Reason if denied |
+|----------------------|----------------------|------------------|
+| run-tests            | NO                   | Owned by implementer and tester |
+| draft-pr-description | YES                  | Project manager owns the PR description |
+| summarize-session    | YES                  | Project manager may summarize the run |
+| rebuild-and-deploy   | NO                   | Outward-facing; orchestrator only, with checkpoint |
+| send-slack-message   | YES                  | Project manager owns status communication; requires human confirmation |
+| send-email           | YES                  | Project manager owns status communication; requires human confirmation |
+| check-gmail          | NO                   | Reading the inbox is not needed to report status |
 
 ### Data classification ceiling
 
-**Maximum level:** public  
-**Reason:** Retrieval is denied for this role; public is recorded as the default ceiling.
+**Maximum level:** internal
+**Reason:** Status reporting uses internal run results only; nothing confidential may be sent outward.
 
 ### Autonomy level
 
-**Level:** low  
-**Conditions for human checkpoint:** Before publishing text externally or changing repository state.  
-**Reason:** Project-manager outputs are human-facing and should remain advisory.  
-**Container permissions:** workspace read-only, memory omitted
+**Level:** low
+**Conditions for human checkpoint:** Before updating the ticket, sending any Slack message, or sending any email (CLAUDE.md human-in-the-loop checkpoint: changing the shared ticket is consequential and outward-facing).
+**Reason:** Everything this role does is visible outside the team, so a human confirms each outward action.
 
-## Role: orchestrator
+## Conflicts resolved against the routing map (2026-11-09)
 
-**Version:** v1.0.0  
-**Defined in:** `.agents/orchestrator.md`
-
-### MCP server and operation access
-
-| Operation | Server | Granted | Justification / Denial reason |
-|---|---|---|---|
-| write_entry | storage | YES | Orchestrator records workflow decisions. |
-| read_entry | storage | YES | Orchestrator reads state while coordinating roles. |
-| list_entries | storage | YES | Orchestrator lists state while coordinating roles. |
-| update_entry | storage | YES | Orchestrator updates state after coordinated work. |
-| delete_entry | storage | YES | Orchestrator manages state lifecycle and is the only role permitted to delete. |
-| audit_read | storage | YES | Orchestrator inspects authorization denials. |
-| retrieve | retrieval | YES | Orchestrator retrieves references when coordinating. |
-
-### Skill activation scope
-
-| Skill | Activation permitted | Reason if denied |
-|---|---|---|
-| run-tests | YES | Orchestrator may invoke tests while coordinating. |
-| draft-pr-description | YES | Orchestrator may invoke PR drafting while coordinating. |
-| summarize-session | YES | Orchestrator may summarize workflow state. |
-
-### Data classification ceiling
-
-**Maximum level:** confidential  
-**Reason:** Orchestrator coordinates the full workflow and audits policy enforcement.
-
-### Autonomy level
-
-**Level:** medium  
-**Conditions for human checkpoint:** Before destructive operations, external publication, or any action outside the protected workflow.  
-**Reason:** Orchestration is reversible within the container, but lifecycle and publication actions need human accountability.  
-**Container permissions:** workspace read-write, memory mounted
+- **project-manager write_entry:** the earlier `docs/routing-and-tool-grant-map.json` granted it; this policy denies it on least-privilege grounds, matching `mcp-servers/storage/allow-list.json`. The map was corrected. Known gap: holdout task HO-07 asserts that the project manager makes exactly one write_entry; the locked holdout task is not edited, so HO-07 is expected to fail that assertion until the holdout set is formally revised.
+- **planner:** missing from `mcp-servers/storage/allow-list.json` and `mcp-servers/retrieval/allow-list.json`; it must be added there (read_entry, list_entries, retrieve at internal) when enforcement is configured.
+- **tester and reviewer:** the earlier map omitted list_entries (and retrieve for tester); the map now matches this policy.
 
 ## Deterministic conversion history
 
