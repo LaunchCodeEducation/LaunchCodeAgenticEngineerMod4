@@ -1,8 +1,42 @@
 {
-  "orchestrator": ["read_entry", "list_entries", "write_entry", "update_entry", "delete_entry", "audit_read", "retrieve"],
-  "planner": ["read_entry", "list_entries", "retrieve"],
-  "implementer": ["write_entry", "read_entry", "list_entries", "update_entry", "retrieve"],
-  "reviewer": ["read_entry", "list_entries", "retrieve"],
-  "tester": ["read_entry", "list_entries", "retrieve"],
-  "project_manager": ["read_entry", "list_entries"]
+  "orchestrator": [
+    "read_entry",
+    "list_entries",
+    "write_entry",
+    "update_entry",
+    "delete_entry",
+    "audit_read",
+    "retrieve"
+  ],
+  "planner": [
+    "read_entry",
+    "list_entries",
+    "retrieve"
+  ],
+  "implementer": [
+    "write_entry",
+    "read_entry",
+    "list_entries",
+    "update_entry",
+    "retrieve"
+  ],
+  "reviewer": [
+    "read_entry",
+    "list_entries",
+    "retrieve"
+  ],
+  "tester": [
+    "read_entry",
+    "list_entries",
+    "retrieve"
+  ],
+  "project_manager": [
+    "read_entry",
+    "list_entries"
+  ],
+  "dependency_auditor": [
+    "read_entry",
+    "list_entries",
+    "retrieve"
+  ]
 }

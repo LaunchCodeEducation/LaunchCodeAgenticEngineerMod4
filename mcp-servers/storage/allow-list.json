@@ -9,7 +9,8 @@
     "reviewer",
     "tester",
     "project-manager",
-    "orchestrator"
+    "orchestrator",
+    "dependency-auditor"
   ],
   "list_entries": [
     "implementer",
@@ -17,7 +18,8 @@
     "reviewer",
     "tester",
     "project-manager",
-    "orchestrator"
+    "orchestrator",
+    "dependency-auditor"
   ],
   "update_entry": [
     "implementer",

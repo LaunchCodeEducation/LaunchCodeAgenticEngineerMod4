@@ -12,7 +12,7 @@ whose allow-list (`mcp/roles.allowlist.json`) must match the Activation Scope be
 ## Activation Scope
 
 - **Permitted roles:** implementer, tester
-- **Denied roles:** orchestrator, planner, reviewer, project-manager
+- **Denied roles:** orchestrator, planner, reviewer, project-manager, dependency-auditor
 - **Reason:** Running tests is core to implementing and verifying a change. Read-only roles must not
   run it because a test run writes output and can change workspace state
   (`docs/governance-policy.md`, skill tables).

@@ -15,8 +15,8 @@ case "$ROLE" in
     WORKSPACE_MODE="rw"
     MOUNT_MEMORY=1
     ;;
-  # planner: plans from retrieved docs, writes no project files (policy: autonomy low)
-  planner|reviewer|tester|project-manager)
+  # planner / dependency-auditor: read and report only, write no project files (policy: autonomy low)
+  planner|reviewer|tester|project-manager|dependency-auditor)
     WORKSPACE_MODE="ro"
     MOUNT_MEMORY=0
     ;;

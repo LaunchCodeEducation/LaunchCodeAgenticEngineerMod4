@@ -1,9 +1,31 @@
 {
-  "file_read": ["planner", "implementer", "reviewer", "tester", "orchestrator"],
-  "file_write": ["implementer", "orchestrator"],
-  "codebase_search": ["planner", "implementer", "reviewer"],
+  "file_read": [
+    "planner",
+    "implementer",
+    "reviewer",
+    "tester",
+    "orchestrator",
+    "dependency-auditor"
+  ],
+  "file_write": [
+    "implementer",
+    "orchestrator"
+  ],
+  "codebase_search": [
+    "planner",
+    "implementer",
+    "reviewer",
+    "dependency-auditor"
+  ],
   "shell": [],
-  "test_runner": ["implementer", "tester"],
-  "task_tracker": ["project-manager"],
-  "web_search": ["researcher"]
+  "test_runner": [
+    "implementer",
+    "tester"
+  ],
+  "task_tracker": [
+    "project-manager"
+  ],
+  "web_search": [
+    "researcher"
+  ]
 }

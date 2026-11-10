@@ -11,6 +11,6 @@ the test outcome, and any open risks. The draft is shown to a human before it is
 ## Activation Scope
 
 - **Permitted roles:** project-manager
-- **Denied roles:** orchestrator, planner, implementer, reviewer, tester
+- **Denied roles:** orchestrator, planner, implementer, reviewer, tester, dependency-auditor
 - **Reason:** The project manager owns outward-facing status and PR text
   (`docs/governance-policy.md`, skill tables).

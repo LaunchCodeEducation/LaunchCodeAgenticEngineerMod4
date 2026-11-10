@@ -2,7 +2,7 @@
 # governance policy allows. Pass the role name as the first argument.
 #
 # Usage: .\scripts\run-agent.ps1 <role-name> [command...]
-# Roles: implementer, orchestrator, planner, reviewer, tester, project-manager
+# Roles: implementer, orchestrator, planner, reviewer, tester, project-manager, dependency-auditor
 # Permissions follow docs/governance-policy.md: deny first (read-only, no memory),
 # then widen only for roles whose policy entry requires it.
 
@@ -25,8 +25,8 @@ switch ($Role) {
         $WorkspaceMode = 'rw'
         $MountMemory = $true
     }
-    # planner: plans from retrieved docs, writes no project files (policy: autonomy low)
-    { $_ -in 'planner', 'reviewer', 'tester', 'project-manager' } {
+    # planner / dependency-auditor: read and report only, write no project files (policy: autonomy low)
+    { $_ -in 'planner', 'reviewer', 'tester', 'project-manager', 'dependency-auditor' } {
         $WorkspaceMode = 'ro'
         $MountMemory = $false
     }
