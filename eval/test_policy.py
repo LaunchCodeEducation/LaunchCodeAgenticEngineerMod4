@@ -130,7 +130,7 @@ SCOPED_SKILLS = sorted(
 
 
 def test_policy_has_expected_roles():
-    assert set(ROLES) == {"orchestrator", "planner", "implementer", "reviewer", "tester", "project-manager"}, ROLES
+    assert set(ROLES) == {"orchestrator", "planner", "implementer", "reviewer", "tester", "project-manager", "dependency-auditor"}, ROLES
 
 
 @pytest.mark.parametrize("role", ROLES)
