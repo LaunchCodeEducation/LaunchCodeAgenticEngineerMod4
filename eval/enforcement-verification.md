@@ -6,11 +6,11 @@ The evidence was captured on 2026-11-10 in the development container. The code u
 
 **Environment limits:**
 
-- Docker is not installed in the development container, so the role container was not launched.
+- Docker is not installed in the development container, so the role container was not launched there. The repository owner ran the three Docker-host checks on their Mac on 2026-11-10; see "Docker-host results" under Layer 1.
 - MCP Inspector was not used.
 - No Claude Code session was started.
 
-Nothing below claims that any of these was observed.
+Nothing below claims that any of these was observed, apart from the Docker-host results reported by the repository owner.
 
 Version capture:
 
@@ -28,8 +28,10 @@ $ git rev-parse HEAD
 | Check | Layer | Result | Evidence type |
 |---|---|---|---|
 | Launcher arguments | Layer 1 | PASS | Fake `docker` on PATH; real launcher script (`scripts/run-agent.sh`) |
-| Read-only filesystem denies `/workspace/should-fail.txt` | Layer 1 | NOT RUN | Requires a Docker host |
-| `/memory` not mounted inside the container | Layer 1 | NOT RUN in a container | Launcher arguments contain no `agent-memory:/memory` |
+| Read-only filesystem denies `/workspace/should-fail.txt` | Layer 1 | PASS | Docker host (repository owner's Mac), real `scripts/run-agent.sh`, 2026-11-10 |
+| `/memory` not mounted inside the container | Layer 1 | PASS | Docker host: `/proc/mounts` check printed `no /memory`; launcher arguments contain no `agent-memory:/memory` |
+| `should-fail.txt` absent from the host repository | Layer 1 | PASS | Docker host: `ls` on the host |
+| Slack and Gmail MCP servers in the role container | Layer 2 | NOT VERIFIED | Registered at container startup; authorization for this role not tested |
 | Unknown and misspelled roles rejected | Layer 1 | PASS | Real launcher script |
 | Storage operations denied (all six) | Layer 2 | PASS | Real stdio MCP calls |
 | Retrieval denied | Layer 2 | PASS | Real stdio MCP call |
@@ -115,7 +117,7 @@ ls: cannot access '/workspace/should-fail.txt': No such file or directory
 
 The file is absent because the fake `docker` only printed the `touch` command. The command never ran inside a container, so this check does **not** demonstrate the read-only mount.
 
-### Not run here
+### Docker-host checks
 
 Docker is not available in the development container:
 
@@ -124,7 +126,7 @@ $ command -v docker
 [exit code: 1]
 ```
 
-**Pending.** Run these commands on the Docker host from the repository root:
+The following commands were given for the Docker host (repository root):
 
 ```bash
 bash scripts/run-agent.sh dependency-auditor bash -c 'touch /workspace/should-fail.txt; echo "exit=$?"' </dev/null
@@ -134,7 +136,41 @@ bash scripts/run-agent.sh dependency-auditor bash -c 'grep -E " /workspace | /me
 ls -la should-fail.txt    # expected: No such file or directory
 ```
 
-Results: pending — to be recorded from the Docker host.
+### Docker-host results (2026-11-10)
+
+Run by the repository owner on their Mac through the real launcher, `scripts/run-agent.sh dependency-auditor`. The outputs below are as reported by the owner; the raw terminal transcript is not stored in the repository.
+
+1. Creating `/workspace/should-fail.txt` inside the container: **PASS**
+
+```
+touch: cannot touch ‘/workspace/should-fail.txt’: Read-only file system
+exit=1
+```
+
+2. Container mounts: **PASS**. `/workspace` is mounted `ro`, and there is no `/memory`.
+
+```
+/run/host_mark/Users /workspace fakeowner ro,nosuid,nodev,relatime,fakeowner 0 0
+no /memory
+```
+
+3. Host repository after the run: **PASS**
+
+```
+ls: should-fail.txt: No such file or directory
+```
+
+### Slack and Gmail MCP servers in the role container
+
+The image entrypoint (`docker-entrypoint.sh`) registers the `slack` and `gmail` MCP servers with `claude mcp add` every time a container starts, including `dependency-auditor` containers launched by `scripts/run-agent.sh`. The repository owner observed this registration at container startup.
+
+The policy denies Slack and Gmail to every MarketRadar role (governance policy, "Scope and evidence"; D10). Whether a `dependency-auditor` session can actually reach their tools has **not been tested**:
+
+- the agent definition's `tools:` list (Read, Grep, Glob, Bash) names no Slack or Gmail tool, but no session has confirmed that this keeps those tools out of reach;
+- `scripts/run-agent.sh` no longer passes Slack credentials, but the servers are still registered;
+- no hook or allow-list covers these servers.
+
+This record makes no claim that the Slack or Gmail tools are inaccessible to this role.
 
 ## Layer 2: MCP server authorization
 
@@ -285,7 +321,7 @@ Both runs exited with code 0.
 
 ## Not verified
 
-- The container's read-only denial of `/workspace/should-fail.txt` and the absence of `/memory`. These need a Docker host; see the pending commands above.
+- Authorization of the Slack and Gmail MCP servers that the entrypoint registers in the role container (D10).
 - Live hook behaviour in a Claude Code session (D16).
 - MCP Inspector.
 - The audit path on the `agent-logs` volume (`/logs/*.jsonl`). The MCP run wrote to temporary files instead.
