@@ -319,6 +319,17 @@ Full `eval/` suite, final summary line:
 
 Both runs exited with code 0.
 
+### Re-run after Step 3 (red-team), 2026-11-10
+
+```
+$ cd /workspace && PYTHONDONTWRITEBYTECODE=1 python -m pytest eval/test_policy.py -v -p no:cacheprovider
+============================= 185 passed in 2.57s ==============================
+$ cd /workspace && PYTHONDONTWRITEBYTECODE=1 python -m pytest eval/ -q -p no:cacheprovider
+206 passed in 2.59s
+```
+
+Both runs exited with code 0. The live red-team result for this role is recorded in `eval/red-team-results.md`, Prompt 5.
+
 ## Not verified
 
 - Authorization of the Slack and Gmail MCP servers that the entrypoint registers in the role container (D10).
