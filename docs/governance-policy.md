@@ -61,6 +61,7 @@ Roles in this orchestration (6): orchestrator, planner, implementer, reviewer, t
 **Level:** medium
 **Conditions for human checkpoint:** After the planner returns (plan approval); before the project-manager updates the ticket; before any delete_entry; before rebuild-and-deploy; whenever two reviewers return conflicting verdicts on the same section, the orchestrator must escalate instead of choosing one (calibration-log.md, near-miss: conflicting reviewers rarely exercised); a run may not be reported as passing on deterministic checks alone when the rubric suite has not run (calibration-log.md, near-miss: first dev run passed 14/14 deterministic but scored 0/5 on the rubric).
 **Reason:** Coordination is reversible inside the container, but lifecycle, publication, and approval decisions need human accountability.
+**Container permissions:** workspace read-write, memory mounted
 
 ## Role: planner
 
@@ -100,6 +101,7 @@ Roles in this orchestration (6): orchestrator, planner, implementer, reviewer, t
 **Level:** low
 **Conditions for human checkpoint:** Every plan is shown to the human for approval before any code is written (CLAUDE.md human-in-the-loop checkpoint). The planner works only from its scoped handoff and may not rely on private context from other roles (calibration-log.md, near-miss: context bleed only checked when a canary is planted).
 **Reason:** A wrong plan propagates into every later phase, so it is reviewed before work begins.
+**Container permissions:** workspace read-only, memory omitted
 
 ## Role: implementer
 
@@ -139,6 +141,7 @@ Roles in this orchestration (6): orchestrator, planner, implementer, reviewer, t
 **Level:** medium
 **Conditions for human checkpoint:** Before running any shell command outside the test suite; before writing to any file not in the current feature branch scope.
 **Reason:** Implementation is reversible within the container; shell commands outside the test suite are higher risk.
+**Container permissions:** workspace read-write, memory mounted
 
 ## Role: reviewer
 
@@ -178,6 +181,7 @@ Roles in this orchestration (6): orchestrator, planner, implementer, reviewer, t
 **Level:** low
 **Conditions for human checkpoint:** Reviewer output is advisory only; it may not apply any change. Any action beyond producing review findings requires escalation to the orchestrator. When parallel reviewers disagree, the reviewer reports its verdict and the orchestrator escalates to a human (calibration-log.md, near-miss: conflicting reviewers).
 **Reason:** A review role that can change state can quietly alter the very work it is supposed to inspect independently.
+**Container permissions:** workspace read-only, memory omitted
 
 ## Role: tester
 
@@ -217,6 +221,7 @@ Roles in this orchestration (6): orchestrator, planner, implementer, reviewer, t
 **Level:** medium
 **Conditions for human checkpoint:** Tester may run the test suite without approval; any command outside the test suite, or any change to test fixtures, requires escalation to the orchestrator.
 **Reason:** Running tests is reversible and is the tester's job; altering what is tested would undermine the result.
+**Container permissions:** workspace read-only, memory omitted
 
 ## Role: project-manager
 
@@ -256,6 +261,7 @@ Roles in this orchestration (6): orchestrator, planner, implementer, reviewer, t
 **Level:** low
 **Conditions for human checkpoint:** Before updating the ticket, sending any Slack message, or sending any email (CLAUDE.md human-in-the-loop checkpoint: changing the shared ticket is consequential and outward-facing).
 **Reason:** Everything this role does is visible outside the team, so a human confirms each outward action.
+**Container permissions:** workspace read-only, memory omitted
 
 ## Conflicts resolved against the routing map (2026-11-09)
 
