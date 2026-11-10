@@ -186,16 +186,3 @@ jobs:
           path: ci-audit-trail-*.json
           retention-days: 90
           if-no-files-found: error
-
-  # TEMPORARY (Module 4.2, Configure Secrets, Step 2): confirm the secret is
-  # available to the workflow. Prints only the key's length. Remove after the
-  # length has been verified.
-  secret-presence-check:
-    name: Secret Presence Check (temporary)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check OPENROUTER_API_KEY is present
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        run: |
-          echo "OPENROUTER_API_KEY length: ${#OPENROUTER_API_KEY}"
