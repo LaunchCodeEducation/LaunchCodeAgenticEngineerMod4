@@ -4,6 +4,10 @@
       "granted": true,
       "classification_ceiling": "internal"
     },
+    "planner": {
+      "granted": true,
+      "classification_ceiling": "internal"
+    },
     "reviewer": {
       "granted": true,
       "classification_ceiling": "internal"

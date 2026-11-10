@@ -5,6 +5,7 @@
   ],
   "read_entry": [
     "implementer",
+    "planner",
     "reviewer",
     "tester",
     "project-manager",
@@ -12,6 +13,7 @@
   ],
   "list_entries": [
     "implementer",
+    "planner",
     "reviewer",
     "tester",
     "project-manager",
