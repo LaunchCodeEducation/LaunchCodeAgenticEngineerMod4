@@ -589,3 +589,183 @@ def test_skill_denial_audit_record_is_complete(tmp_path):
     assert len(records) == 1
     _check_audit_record(records[0])
     assert records[0]["skill"] == "run-tests"
+
+
+# ---------------------------------------------------------------------------
+# Policy observability: parse the per-role tables in docs/governance-policy.md
+# and compare them with the enforcement artifacts, so a grant changed in only
+# one place fails. Each comparison reports overgrants (granted by an artifact
+# but not by the policy) and missing grants (granted by the policy but absent
+# from the artifact). The hard-coded matrices above are also checked against
+# the parsed tables.
+# ---------------------------------------------------------------------------
+
+POLICY_PATH = REPO_ROOT / "docs" / "governance-policy.md"
+POLICY_ROLES = [
+    "planner",
+    "implementer",
+    "tester",
+    "marketradar-code-reviewer",
+    "project-manager",
+    "orchestrator",
+]
+
+
+def _policy_subsection(body, title):
+    match = re.search(rf"^### {re.escape(title)}[ \t]*$(.*?)(?=^### |\Z)", body, re.M | re.S)
+    assert match, f"policy role section is missing '### {title}'"
+    return match.group(1)
+
+
+def _policy_table_rows(section):
+    rows = []
+    for line in section.splitlines():
+        line = line.strip()
+        if not line.startswith("|") or set(line) <= set("|-: "):
+            continue
+        rows.append([cell.strip() for cell in line.strip("|").split("|")])
+    return rows
+
+
+def _parse_policy_roles():
+    text = POLICY_PATH.read_text(encoding="utf-8")
+    parts = re.split(r"^## Role: (\S+)[ \t]*$", text, flags=re.M)
+    roles = {}
+    for name, body in zip(parts[1::2], parts[2::2]):
+        body = re.split(r"^## ", body, flags=re.M)[0]
+        runtime = re.search(r"^\*\*Module 4 runtime role:\*\* `([^`]+)`", body, re.M)
+        ceiling = re.search(r"^\*\*Maximum level:\*\*\s*(\w+)", body, re.M)
+        container = re.search(r"^\*\*Container permissions:\*\*(.*)$", body, re.M)
+        assert runtime and ceiling and container, f"policy role '{name}' is missing a required field"
+        mcp = {
+            row[0]: row[2].upper().startswith("YES")
+            for row in _policy_table_rows(_policy_subsection(body, "MCP server and operation access"))
+            if len(row) >= 3 and row[1] in ("storage", "retrieval")
+        }
+        skills = {
+            row[0]: row[1].upper().startswith("YES")
+            for row in _policy_table_rows(_policy_subsection(body, "Skill activation scope"))
+            if len(row) >= 2 and row[1].upper().startswith(("YES", "NO"))
+        }
+        line = container.group(1)
+        mode = "rw" if "workspace read-write" in line else "ro" if "workspace read-only" in line else None
+        memory = True if "memory mounted" in line else False if "memory omitted" in line else None
+        roles[name] = {
+            "runtime": runtime.group(1),
+            "storage": {op: mcp.get(op) for op in STORAGE_OPS},
+            "retrieve": mcp.get("retrieve"),
+            "ceiling": ceiling.group(1),
+            "skills": skills,
+            "container": (mode, memory),
+        }
+    return roles
+
+
+def _grant_diff(label, artifact, policy):
+    overgrants = sorted(set(artifact) - set(policy))
+    missing = sorted(set(policy) - set(artifact))
+    return f"{label}: overgrants {overgrants}, missing grants {missing}"
+
+
+@pytest.fixture(scope="module")
+def policy_roles():
+    return _parse_policy_roles()
+
+
+def test_policy_tables_parse_for_every_role(policy_roles):
+    assert sorted(policy_roles) == sorted(POLICY_ROLES)
+    for name, role in policy_roles.items():
+        assert None not in role["storage"].values(), f"{name}: storage table incomplete"
+        assert role["retrieve"] is not None, f"{name}: retrieve row missing"
+        assert "run-tests" in role["skills"], f"{name}: run-tests row missing"
+        assert None not in role["container"], f"{name}: container permissions not parsed"
+
+
+def test_hard_coded_matrices_match_policy_tables(policy_roles):
+    by_runtime = {role["runtime"]: role for role in policy_roles.values()}
+    assert EXPECTED_STORAGE_GRANTS == {
+        runtime: {op for op, granted in role["storage"].items() if granted}
+        for runtime, role in by_runtime.items()
+    }
+    assert EXPECTED_RETRIEVE_CEILING == {
+        runtime: (role["ceiling"] if role["retrieve"] else None)
+        for runtime, role in by_runtime.items()
+    }
+    assert EXPECTED_RUN_TESTS_SCOPE == {
+        runtime: ("YES" if role["skills"]["run-tests"] else "NO")
+        for runtime, role in by_runtime.items()
+    }
+    for name, role in policy_roles.items():
+        assert EXPECTED_CONTAINER[name] == (role["runtime"], *role["container"])
+
+
+@pytest.mark.parametrize("op", STORAGE_OPS)
+def test_storage_allow_list_matches_policy_tables(op, policy_roles):
+    allow_list = json.loads((SERVERS_DIR / "storage" / "allow-list.json").read_text(encoding="utf-8"))
+    assert set(allow_list) == set(STORAGE_OPS)
+    granted = {role["runtime"] for role in policy_roles.values() if role["storage"][op]}
+    actual = set(allow_list[op])
+    assert actual == granted, _grant_diff(op, actual, granted)
+
+
+def test_retrieval_allow_list_matches_policy_tables(policy_roles):
+    rules = json.loads((SERVERS_DIR / "retrieval" / "allow-list.json").read_text(encoding="utf-8"))["retrieve"]
+    granted = {role["runtime"]: role["ceiling"] for role in policy_roles.values() if role["retrieve"]}
+    actual = {name: rule.get("classification_ceiling") for name, rule in rules.items() if rule.get("granted")}
+    assert set(actual) == set(granted), _grant_diff("retrieve", actual, granted)
+    assert actual == granted, f"retrieve ceilings differ: allow-list {actual}, policy {granted}"
+    known = {role["runtime"] for role in policy_roles.values()}
+    assert set(rules) <= known, f"retrieval allow-list names roles without a policy entry: {sorted(set(rules) - known)}"
+
+
+def test_run_tests_scope_matches_policy_tables(policy_roles):
+    text = RUN_TESTS_SKILL.read_text(encoding="utf-8")
+    skill_scope = {
+        match.group(1)
+        for match in re.finditer(r"^\|\s*`?([a-z-]+)`?[^|]*\|\s*YES\s*\|", text, re.MULTILINE)
+    }
+    granted = {role["runtime"] for role in policy_roles.values() if role["skills"]["run-tests"]}
+    assert skill_scope == granted, _grant_diff("run-tests Activation Scope", skill_scope, granted)
+    holders = set()
+    for path in sorted(AGENTS_DIR.glob("*.md")):
+        fields = _frontmatter(path)
+        if "Skill" in _tools(fields):
+            holders.add(fields.get("name"))
+    expected_holders = {name for name, role in policy_roles.items() if role["skills"]["run-tests"]}
+    assert holders == expected_holders, _grant_diff("Skill tool holders", holders, expected_holders)
+
+
+@pytest.mark.parametrize("role_name", POLICY_ROLES)
+def test_skill_hook_matches_policy_tables(role_name, policy_roles, tmp_path):
+    agent_type = None if role_name == "orchestrator" else role_name
+    result = _run_hook(_skill_payload(agent_type, "run-tests"), tmp_path)
+    assert result.returncode == 0, result.stderr
+    authorized = result.stdout.strip() == ""
+    granted = policy_roles[role_name]["skills"]["run-tests"]
+    assert authorized == granted, (
+        f"hook {'authorizes' if authorized else 'denies'} run-tests for {role_name}; "
+        f"policy says {'YES' if granted else 'NO'}"
+    )
+
+
+@pytest.mark.parametrize("role_name", POLICY_ROLES)
+def test_container_permissions_match_policy_tables(role_name, policy_roles, tmp_path):
+    role = policy_roles[role_name]
+    mode, memory = role["container"]
+    result, args = _launch(role_name, tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert args is not None
+    assert f"AGENT_ROLE={role['runtime']}" in args
+    assert f"{REPO_ROOT}:/workspace:{mode}" in args
+    assert ("agent-memory:/memory" in args) is memory
+
+
+def test_launcher_accepts_only_policy_roles(policy_roles):
+    script = RUN_AGENT.read_text(encoding="utf-8")
+    accepted = set()
+    for match in re.finditer(r"^\s{2}([a-z|-]+)\)[ \t]*$", script, re.M):
+        accepted |= set(match.group(1).split("|"))
+    known = set(policy_roles) | {role["runtime"] for role in policy_roles.values()}
+    assert accepted <= known, f"run-agent.sh launches roles without a policy entry: {sorted(accepted - known)}"
+    missing = set(policy_roles) - accepted
+    assert not missing, f"policy roles that run-agent.sh cannot launch: {sorted(missing)}"
