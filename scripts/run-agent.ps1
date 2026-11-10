@@ -2,7 +2,9 @@
 # governance policy allows. Pass the role name as the first argument.
 #
 # Usage: .\scripts\run-agent.ps1 <role-name> [command...]
-# Roles: implementer, orchestrator, reviewer, tester, project-manager
+# Roles: implementer, orchestrator, planner, reviewer, tester, project-manager
+# Permissions follow docs/governance-policy.md: deny first (read-only, no memory),
+# then widen only for roles whose policy entry requires it.
 
 param(
     [Parameter(Mandatory = $true, Position = 0)]
@@ -14,7 +16,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-$Image = if ($env:AGENT_IMAGE) { $env:AGENT_IMAGE } else { 'launchcode-agentic:module4' }
+$Image = if ($env:AGENT_IMAGE) { $env:AGENT_IMAGE } else { 'agentic_engineer_4' }
 $WorkspaceMode = 'ro'
 $MountMemory = $false
 
@@ -23,7 +25,8 @@ switch ($Role) {
         $WorkspaceMode = 'rw'
         $MountMemory = $true
     }
-    { $_ -in 'reviewer', 'tester', 'project-manager' } {
+    # planner: plans from retrieved docs, writes no project files (policy: autonomy low)
+    { $_ -in 'planner', 'reviewer', 'tester', 'project-manager' } {
         $WorkspaceMode = 'ro'
         $MountMemory = $false
     }
@@ -44,7 +47,12 @@ $DockerArgs = @(
     '-v', "${CurDir}:/workspace:${WorkspaceMode}",
     '-v', "${CurDir}/logs:/logs:rw",
     '-e', 'STORAGE_AUDIT_LOG=/logs/storage-audit-log.jsonl',
-    '-e', 'RETRIEVAL_AUDIT_LOG=/logs/retrieval-audit-log.jsonl'
+    '-e', 'RETRIEVAL_AUDIT_LOG=/logs/retrieval-audit-log.jsonl',
+    # Pass the API key through from the host shell without echoing its value.
+    '-e', 'OPENROUTER_API_KEY',
+    '-e', 'SLACK_BOT_TOKEN=', '-e', 'SLACK_TEAM_ID=',
+    # Claude Code login persistence (not project state).
+    '-v', 'claude-auth:/claude-auth'
 )
 
 if ($MountMemory) {
