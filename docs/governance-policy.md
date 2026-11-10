@@ -1,8 +1,9 @@
 # Agent Governance Policy
 
 Version: v1.0.0  
-Last updated: 2026-06-06  
-Reviewed by: Repository Owner
+Last updated: 2026-11-09  
+Author: swarna  
+Reviewed by: swarna (FashionMate agentic harness owner)
 
 ## Policy basis
 
