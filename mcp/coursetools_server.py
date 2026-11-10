@@ -10,12 +10,15 @@ only for local course exercises.
 
 from __future__ import annotations
 
+import datetime
 import json
 import os
 from pathlib import Path
 from typing import Any
 
-from mcp.server.fastmcp import FastMCP
+# Module 4 image ships mcp 2.x, where mcp.server.fastmcp was removed; use the
+# standalone fastmcp package, as the Module 4 storage/retrieval servers do.
+from fastmcp import FastMCP
 
 SERVER_NAME = "coursetools"
 mcp = FastMCP(SERVER_NAME)
@@ -43,11 +46,41 @@ def load_allowlist() -> dict[str, list[str]]:
 ALLOWLIST = load_allowlist()
 
 
+# Red-team fix (eval/red-team-results.md, Prompt 6): authorize on the role the
+# process was launched with (set by scripts/run-agent.* as AGENT_ROLE), never on a
+# role name the agent supplies. Every denial is written to an audit log (Prompt 4).
+CALLING_ROLE = os.environ.get("AGENT_ROLE", "")
+AUDIT_LOG_PATH = Path(os.environ.get("COURSETOOLS_AUDIT_LOG", "logs/coursetools-audit-log.jsonl"))
+
+
+def _record(event: str, tool_name: str, claimed_role: str, detail: str) -> None:
+    entry = {
+        "timestamp": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "event": event,
+        "operation": tool_name,
+        "role": CALLING_ROLE or claimed_role,
+        "claimed_role": claimed_role,
+        "outcome": event,
+        "detail": detail,
+        "policy_reference": "docs/governance-policy.md",
+    }
+    AUDIT_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(AUDIT_LOG_PATH, "a", encoding="utf-8") as log:
+        log.write(json.dumps(entry) + "\n")
+
+
 def authorize(tool_name: str, role: str) -> None:
+    if CALLING_ROLE and role != CALLING_ROLE:
+        detail = f"claimed role '{role}' does not match launch role '{CALLING_ROLE}'"
+        _record("role_mismatch_denied", tool_name, role, detail)
+        raise PermissionError(f"Authorization error: {detail} for {tool_name}.")
+    effective_role = CALLING_ROLE or role
     allowed_roles = ALLOWLIST.get(tool_name, [])
-    if role not in allowed_roles:
+    if effective_role not in allowed_roles:
+        _record("authorization_denied", tool_name, role,
+                f"allowed roles: {allowed_roles or 'none'}")
         raise PermissionError(
-            f"Authorization error: role '{role}' is not on the allow-list for {tool_name}. "
+            f"Authorization error: role '{effective_role}' is not on the allow-list for {tool_name}. "
             f"Allowed roles: {allowed_roles or 'none'}."
         )
 
