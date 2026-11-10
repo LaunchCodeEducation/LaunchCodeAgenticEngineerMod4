@@ -20,7 +20,7 @@ Every role starts with no access. All grants below are explicit and justified. A
 To widen access, open a pull request with: the proposed grant, a concrete justification, and confirmation that the grant does not conflict with any near-miss pattern in the calibration log.
 Near-miss references below point to `docs/calibration-log.md`, section "Near-miss patterns for Module 4 governance", and to the matching risk statements in `docs/near-miss-risks.md`. Denials without a near-miss reference stand on least-privilege grounds: the role's defined job does not need the operation.
 
-Roles in this orchestration (6): orchestrator, planner, implementer, reviewer, tester, project-manager.
+Roles in this orchestration (7): orchestrator, planner, implementer, reviewer, tester, project-manager, dependency-auditor.
 
 ## Role: orchestrator
 
@@ -261,6 +261,46 @@ Roles in this orchestration (6): orchestrator, planner, implementer, reviewer, t
 **Level:** low
 **Conditions for human checkpoint:** Before updating the ticket, sending any Slack message, or sending any email (CLAUDE.md human-in-the-loop checkpoint: changing the shared ticket is consequential and outward-facing).
 **Reason:** Everything this role does is visible outside the team, so a human confirms each outward action.
+**Container permissions:** workspace read-only, memory omitted
+
+## Role: dependency-auditor
+
+**Version:** v1.0.0
+**Defined in:** agents/dependency-auditor.md
+
+### MCP server and operation access
+
+| Operation     | Server    | Granted | Justification / Denial reason |
+|---------------|-----------|---------|-------------------------------|
+| read_entry    | storage   | YES     | Auditor reads prior dependency decisions so it does not re-flag an accepted exception |
+| list_entries  | storage   | YES     | Auditor checks which decisions exist before reporting |
+| write_entry   | storage   | NO      | Auditor reports findings in its handoff; it records no project state (least privilege) |
+| update_entry  | storage   | NO      | Auditor must not rewrite an existing decision, e.g. silently marking a vulnerable dependency as accepted (least privilege) |
+| delete_entry  | storage   | NO      | Auditor must not remove project state (calibration-log.md, near-miss: over-broad grant; only caught because a task asked for a delete) |
+| retrieve      | retrieval | YES     | Auditor retrieves internal standards and lessons that define what counts as a dependency problem; ceiling internal |
+
+### Skill activation scope
+
+| Skill                | Activation permitted | Reason if denied |
+|----------------------|----------------------|------------------|
+| run-tests            | NO                   | Auditing reads manifests; running tests writes output and changes workspace state, and is owned by implementer and tester |
+| draft-pr-description | NO                   | Owned by project-manager role |
+| summarize-session    | YES                  | Auditor may summarize its own audit |
+| rebuild-and-deploy   | NO                   | Outward-facing; orchestrator only, with checkpoint |
+| send-slack-message   | NO                   | External communication is owned by project-manager |
+| send-email           | NO                   | External communication is owned by project-manager |
+| check-gmail          | NO                   | Not needed for auditing |
+
+### Data classification ceiling
+
+**Maximum level:** internal
+**Reason:** Dependency rules and standards are internal documents. Confidential material (for example the cost breakdown and open security exposures in the reference corpus) is not needed to judge a dependency, and an auditor that could read open exposures could leak them into a report that travels further than the source (docs/near-miss-risks.md, risk 3: a role gaining access it was never granted).
+
+### Autonomy level
+
+**Level:** low
+**Conditions for human checkpoint:** Every finding is advisory. Any dependency change the auditor recommends is handed to the orchestrator, routed to the implementer, and reviewed; the auditor never applies it. The auditor works only from its scoped handoff (calibration-log.md, near-miss: context bleed only checked when a canary is planted).
+**Reason:** A dependency bump is a code change with supply-chain risk, so it must go through implementation and review rather than be applied by the role that found it.
 **Container permissions:** workspace read-only, memory omitted
 
 ## Conflicts resolved against the routing map (2026-11-09)
