@@ -26,7 +26,7 @@ not conflict with any near-miss pattern in the calibration log.
 
 ## Scope and evidence
 
-- **Roles in scope:** the seven MarketRadar roles below. `dependency-auditor` was added in v1.4.0; its enforcement is pending (D17). They replace the earlier Module 4 sample-role sections, which pointed to `.agents/<role>.md` files that do not exist (`.agents/` contains only `.gitkeep`). Git history keeps the earlier sections.
+- **Roles in scope:** the seven MarketRadar roles below. `dependency-auditor` was added in v1.4.0 and enforced in v1.5.0. They replace the earlier Module 4 sample-role sections, which pointed to `.agents/<role>.md` files that do not exist (`.agents/` contains only `.gitkeep`). Git history keeps the earlier sections.
 - **Runtime role names:** Module 4 servers authorize on the `AGENT_ROLE` environment variable set by `scripts/run-agent.sh` (line 73; read at `mcp-servers/storage/server.py` line 27 and `mcp-servers/retrieval/server.py` line 27). They do not use the `calling_role` an agent declares for itself.
 
   | Role (this policy) | Agent definition | Module 4 runtime role (`AGENT_ROLE`) | Self-declared `calling_role` |
@@ -37,7 +37,7 @@ not conflict with any near-miss pattern in the calibration log.
   | marketradar-code-reviewer | `.claude/agents/marketradar-code-reviewer.md` | `reviewer` | `code-reviewer` |
   | project-manager | `.claude/agents/project-manager.md` | `project-manager` | `project_manager` |
   | orchestrator | `CLAUDE.md` "Orchestrator Workflow" (no agent file) | `orchestrator` | n/a |
-  | dependency-auditor | `.claude/agents/dependency-auditor.md` (to be created during enforcement) | `dependency-auditor`: not yet launchable through `scripts/run-agent.sh` and not named in either allow-list (D17) | n/a (no definition yet) |
+  | dependency-auditor | `.claude/agents/dependency-auditor.md` | `dependency-auditor` (`run-agent.sh` lines 23–27); explicitly denied in both allow-lists | n/a (the definition declares no `calling_role`) |
 
 - **MCP servers in scope:**
   - `mcp-servers/storage`, with operations `write_entry`, `read_entry`, `list_entries`, `update_entry`, `delete_entry` and `audit_read`. All six are implemented in `server.py` (lines 71–124).
@@ -64,6 +64,7 @@ not conflict with any near-miss pattern in the calibration log.
   - v1.3.0 (2026-11-09): Enforcement Layer 3 for `run-tests`: skill defined with an Activation Scope, Tester given the Skill tool for `run-tests` only, PreToolUse hook denies every other caller and audits outside the repository; D6 updated, D16 added; no grant changes other than giving the Tester the Skill tool, which puts its existing run-tests grant into effect.
   - v1.3.1 (2026-11-10): D11 resolved: `eval/test_policy.py` parses the per-role tables and compares them with the enforcement artifacts; grants unchanged.
   - v1.4.0 (2026-11-10): `dependency-auditor` role entry added (Module 4.1 Exercise 1, policy step); enforcement pending (D17); existing roles and grants unchanged.
+  - v1.5.0 (2026-11-10): `dependency-auditor` enforced: agent definition, `run-agent.sh` case (read-only, no memory), explicit denials in both allow-lists, `run-tests` scope NO, and a PreToolUse Bash hook restricting it to the approved audit commands; D17 resolved; grants unchanged.
 
 ### Documentation reconciliation notes
 
@@ -391,9 +392,9 @@ The Planner subagent does not hold the Skill tool (`planner.md` line 4).
 
 ## Role: dependency-auditor
 
-**Version:** v1.4.0  
-**Defined in:** `.claude/agents/dependency-auditor.md` (to be created during enforcement; D17)  
-**Module 4 runtime role:** `dependency-auditor` (not yet launchable through `scripts/run-agent.sh` and not named in either allow-list; D17)  
+**Version:** v1.5.0  
+**Defined in:** `.claude/agents/dependency-auditor.md`  
+**Module 4 runtime role:** `dependency-auditor` (`scripts/run-agent.sh` lines 23–27). Explicitly denied in `mcp-servers/storage/allow-list.json` (`explicit_denials`) and `mcp-servers/retrieval/allow-list.json`.  
 **Purpose:** Inspect the frontend and backend dependency manifests (`tracker-client/package.json`, `tracker-client/package-lock.json`, `tracker-api/package.json`, `tracker-api/package-lock.json`), identify outdated or vulnerable dependencies, and return a read-only audit report to the Orchestrator. It never installs, upgrades, removes or modifies dependencies.
 
 ### MCP server and operation access
@@ -434,15 +435,15 @@ The Planner subagent does not hold the Skill tool (`planner.md` line 4).
 - Escalate instead of proceeding if the audit would need credentials (for example a private registry token) or would write anywhere.
 
 **Reason:** The role only reports. Every effect on the codebase is made by other roles after human approval.  
-**Container permissions:** workspace read-only, memory omitted (not yet launchable: `scripts/run-agent.sh` has no `dependency-auditor` case; D17). Applies only when launched with `scripts/run-agent.sh`; not to Agent-tool subagents (D15).
+**Container permissions:** workspace read-only, memory omitted (`scripts/run-agent.sh` lines 23–27). Applies only when launched with `scripts/run-agent.sh`; not to Agent-tool subagents (D15).
 
 ### Agent tool grants
 
 | Tool | Granted | Reason / Basis |
 |---|---|---|
 | Read, Grep, Glob | YES | Needed to read the four dependency manifests and lockfiles. [LP] |
-| Bash: `npm audit --json` and `npm outdated --json`, each run with `--prefix tracker-api` or `--prefix tracker-client` | YES | Identifying vulnerable and outdated dependencies needs the npm advisory and registry data these read-only commands report. Not enforced until D17 is resolved. [LP] |
-| Bash: everything else, including `npm install`, `npm ci`, `npm update`, `npm uninstall`, `npm audit fix`, redirection, `rm`, `sed -i`, git writes and running tests | NO | Unscoped shell access can change the workspace the role inspects [B1], and writes made through Bash are invisible to `no_source_writes` [B2]. Dependency installation and test execution are outside the role. |
+| Bash: `npm audit --json` and `npm outdated --json`, each run with `--prefix tracker-api` or `--prefix tracker-client` | YES | Identifying vulnerable and outdated dependencies needs the npm advisory and registry data these read-only commands report. Enforced by the PreToolUse hook `scripts/enforce_bash_scope.py` for `agent_type` `dependency-auditor`; tested deterministically, not yet observed in a live session (D16). [LP] |
+| Bash: everything else, including `npm install`, `npm ci`, `npm update`, `npm uninstall`, `npm audit fix`, redirection, `rm`, `sed -i`, git writes and running tests | NO | Unscoped shell access can change the workspace the role inspects [B1], and writes made through Bash are invisible to `no_source_writes` [B2]. Dependency installation and test execution are outside the role. Enforced by the same hook, which denies and audits every other command from this role. |
 | Edit, Write | NO | The role must not modify source files or dependency manifests. [LP] |
 | Skill | NO | No skill activation is granted. [LP] |
 | Direct Read of `.memory/reference/` files above `internal` | NO | Bypasses the retrieval ceiling. [B4] |
@@ -472,8 +473,8 @@ This section records gaps between this policy and the current configuration. No 
 | D13 | Implementer Edit/Write scoping is not enforced. The `tools:` line in `.claude/agents/implementer.md` (line 4) grants unrestricted Edit/Write. The approved-file-list limit comes only from the prompt instructions (`implementer.md` lines 20 and 24). | Enforce the scope with path-scoped permission rules or a review gate. | [LP] |
 | D14 | The Parent Orchestrator session holds Bash, Edit and Write because it runs as the main Claude Code session. This policy grants none of them, so they are denied by the least-privilege default, but nothing restricts them at runtime. | Restrict them with session permission rules, or document narrow read-only Bash exceptions through a PR. | [LP], `CLAUDE.md` role boundaries |
 | D15 | Subagents started through the Claude Code Agent tool (the normal orchestration workflow) do not use `scripts/run-agent.sh`. They run inside the Orchestrator's container and inherit its read-write workspace, environment and MCP configuration, so the container permissions in the role entries do not isolate them. The Orchestrator cannot start role containers itself without access to the Docker socket, which is denied. | Until a launch path that does not expose the Docker socket exists, in-process subagents are limited only by their `tools:` lists and permission rules (D4, D5, D13, D14). A role gets container-level isolation only when a human starts it with `scripts/run-agent.sh`. | Configuration |
-| D16 | Layer 3 runtime behaviour is unverified. The hook's decisions are tested deterministically (`eval/test_policy.py`) using the Skill tool's `skill` parameter and the documented `agent_type` field, but no hook input has been captured from a live Claude Code session. A human typing `/run-tests` bypasses PreToolUse. If `python3` is unavailable the hook errors and Claude Code may let the call proceed. Roles with a read-write workspace can edit the hook or `.claude/settings.json` (D13, D14). | Capture one live hook input for a Tester and a non-Tester Skill call and confirm `agent_type` and `tool_input.skill`. | Configuration |
-| D17 | `dependency-auditor` has a policy entry but no enforcement. `.claude/agents/dependency-auditor.md` does not exist; `scripts/run-agent.sh` rejects the role; neither allow-list names it (so every MCP operation is already denied by default, which matches its grants); its Bash scope is not enforced; and `eval/test_policy.py` does not yet include the role in its expected matrices or launcher checks. | Create the agent definition (Read, Grep, Glob and Bash only; no Edit, Write, Skill or MCP tools), add a read-only, memory-omitted `run-agent.sh` case, scope its Bash with command-scoped permission rules, and add the role to the policy tests. | Configuration |
+| D16 | Layer 3 runtime behaviour is unverified. The hook's decisions are tested deterministically (`eval/test_policy.py`) using the Skill tool's `skill` parameter and the documented `agent_type` field, but no hook input has been captured from a live Claude Code session. A human typing `/run-tests` bypasses PreToolUse. If `python3` is unavailable the hook errors and Claude Code may let the call proceed. Roles with a read-write workspace can edit the hook or `.claude/settings.json` (D13, D14). The same applies to the dependency-auditor Bash hook (`scripts/enforce_bash_scope.py`, reading `tool_input.command`). | Capture one live hook input for a Tester and a non-Tester Skill call and confirm `agent_type` and `tool_input.skill`. | Configuration |
+| D17 | Resolved (Module 4.1 Exercise 1, v1.5.0): `.claude/agents/dependency-auditor.md` holds only Read, Grep, Glob and Bash; `scripts/run-agent.sh` launches it read-only without `/memory`; both allow-lists deny it explicitly; `run-tests` lists it as NO; `scripts/enforce_bash_scope.py` restricts its Bash to the approved audit commands; `eval/test_policy.py` covers the role. Verification evidence: `eval/enforcement-verification.md`. | Run the Docker-host container checks recorded as pending in `eval/enforcement-verification.md`; live hook behaviour remains D16. | Configuration |
 
 ## Policy maintenance
 

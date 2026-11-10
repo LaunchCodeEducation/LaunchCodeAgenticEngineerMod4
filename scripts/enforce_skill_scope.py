@@ -75,16 +75,16 @@ def _inside(path, root):
     return path == root or root in path.parents
 
 
-def audit_log_path(env=None):
+def audit_log_path(env=None, env_var="SKILL_AUDIT_LOG", filename="skill-audit-log.jsonl"):
     """Return the audit log path, never inside the repository or project directory."""
     env = os.environ if env is None else env
     candidates = []
-    if env.get("SKILL_AUDIT_LOG"):
-        candidates.append(Path(env["SKILL_AUDIT_LOG"]))
+    if env.get(env_var):
+        candidates.append(Path(env[env_var]))
     if Path("/logs").is_dir():
-        candidates.append(Path("/logs/skill-audit-log.jsonl"))
+        candidates.append(Path("/logs") / filename)
     home = Path(env.get("HOME") or Path.home())
-    candidates.append(home / ".local" / "state" / "marketradar" / "skill-audit-log.jsonl")
+    candidates.append(home / ".local" / "state" / "marketradar" / filename)
     roots = [REPO_ROOT]
     if env.get("CLAUDE_PROJECT_DIR"):
         roots.append(Path(env["CLAUDE_PROJECT_DIR"]).resolve())
@@ -95,8 +95,8 @@ def audit_log_path(env=None):
     return None
 
 
-def write_audit(record, env=None):
-    path = audit_log_path(env)
+def write_audit(record, env=None, env_var="SKILL_AUDIT_LOG", filename="skill-audit-log.jsonl"):
+    path = audit_log_path(env, env_var, filename)
     if path is None:
         print("enforce_skill_scope: no audit path outside the repository", file=sys.stderr)
         return None

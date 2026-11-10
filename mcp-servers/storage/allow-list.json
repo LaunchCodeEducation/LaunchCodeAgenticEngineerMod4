@@ -13,5 +13,15 @@
   "delete_entry": [],
   "audit_read": [
     "orchestrator"
-  ]
+  ],
+  "explicit_denials": {
+    "dependency-auditor": [
+      "write_entry",
+      "read_entry",
+      "list_entries",
+      "update_entry",
+      "delete_entry",
+      "audit_read"
+    ]
+  }
 }

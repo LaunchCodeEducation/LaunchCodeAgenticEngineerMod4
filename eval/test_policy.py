@@ -85,6 +85,7 @@ RUNTIME_ROLES = [
     "reviewer",
     "project-manager",
     "orchestrator",
+    "dependency-auditor",
 ]
 
 STORAGE_OPS = [
@@ -103,6 +104,7 @@ EXPECTED_STORAGE_GRANTS = {
     "reviewer": set(),
     "project-manager": {"write_entry"},
     "orchestrator": {"read_entry", "list_entries", "audit_read"},
+    "dependency-auditor": set(),
 }
 
 # None means retrieval is denied.
@@ -113,6 +115,7 @@ EXPECTED_RETRIEVE_CEILING = {
     "reviewer": "internal",
     "project-manager": None,
     "orchestrator": None,
+    "dependency-auditor": None,
 }
 
 # Agent-definition names and self-declared calling_role values that are not
@@ -302,6 +305,7 @@ EXPECTED_RUN_TESTS_SCOPE = {
     "reviewer": "NO",
     "project-manager": "NO",
     "orchestrator": "NO",
+    "dependency-auditor": "NO",
 }
 
 # Agent definitions allowed to hold the Skill tool.
@@ -316,6 +320,7 @@ HOOK_AGENT_TYPES = [
     "marketradar-code-reviewer",
     "project-manager",
     "general-purpose",
+    "dependency-auditor",
 ]
 
 # Hard-coded from each role's "Container permissions" line:
@@ -328,6 +333,7 @@ EXPECTED_CONTAINER = {
     "reviewer": ("reviewer", "ro", False),
     "project-manager": ("project-manager", "ro", False),
     "orchestrator": ("orchestrator", "rw", True),
+    "dependency-auditor": ("dependency-auditor", "ro", False),
 }
 
 AUDIT_REQUIRED_FIELDS = {
@@ -608,6 +614,7 @@ POLICY_ROLES = [
     "marketradar-code-reviewer",
     "project-manager",
     "orchestrator",
+    "dependency-auditor",
 ]
 
 
@@ -702,7 +709,7 @@ def test_hard_coded_matrices_match_policy_tables(policy_roles):
 @pytest.mark.parametrize("op", STORAGE_OPS)
 def test_storage_allow_list_matches_policy_tables(op, policy_roles):
     allow_list = json.loads((SERVERS_DIR / "storage" / "allow-list.json").read_text(encoding="utf-8"))
-    assert set(allow_list) == set(STORAGE_OPS)
+    assert set(allow_list) - {"explicit_denials"} == set(STORAGE_OPS)
     granted = {role["runtime"] for role in policy_roles.values() if role["storage"][op]}
     actual = set(allow_list[op])
     assert actual == granted, _grant_diff(op, actual, granted)
@@ -716,6 +723,7 @@ def test_retrieval_allow_list_matches_policy_tables(policy_roles):
     assert actual == granted, f"retrieve ceilings differ: allow-list {actual}, policy {granted}"
     known = {role["runtime"] for role in policy_roles.values()}
     assert set(rules) <= known, f"retrieval allow-list names roles without a policy entry: {sorted(set(rules) - known)}"
+    assert set(rules) == known, f"roles not explicitly represented in the retrieval allow-list: {sorted(known - set(rules))}"
 
 
 def test_run_tests_scope_matches_policy_tables(policy_roles):
@@ -769,3 +777,135 @@ def test_launcher_accepts_only_policy_roles(policy_roles):
     assert accepted <= known, f"run-agent.sh launches roles without a policy entry: {sorted(accepted - known)}"
     missing = set(policy_roles) - accepted
     assert not missing, f"policy roles that run-agent.sh cannot launch: {sorted(missing)}"
+
+
+# ---------------------------------------------------------------------------
+# Module 4.1 Exercise 1: dependency-auditor enforcement.
+# ---------------------------------------------------------------------------
+
+BASH_HOOK = REPO_ROOT / "scripts" / "enforce_bash_scope.py"
+AUDITOR_DEFINITION = AGENTS_DIR / "dependency-auditor.md"
+
+AUDITOR_ALLOWED_COMMANDS = [
+    "npm audit --json --prefix tracker-api",
+    "npm audit --json --prefix tracker-client",
+    "npm outdated --json --prefix tracker-api",
+    "npm outdated --json --prefix tracker-client",
+    "npm --prefix tracker-api audit --json",
+    "npm --prefix tracker-client outdated --json",
+    "npm  audit   --json --prefix   tracker-api",
+]
+
+AUDITOR_DENIED_COMMANDS = [
+    "npm install --prefix tracker-api",
+    "npm ci --prefix tracker-client",
+    "npm update --prefix tracker-api",
+    "npm uninstall vite --prefix tracker-client",
+    "npm audit fix --prefix tracker-api",
+    "npm audit fix --force --json --prefix tracker-api",
+    "npm test --prefix tracker-api",
+    "npm --prefix tracker-api test",
+    "npm audit --json",
+    "npm audit --json --prefix ..",
+    "npm audit --json --prefix tracker-api > audit.json",
+    "npm audit --json --prefix tracker-api; rm -rf tracker-api",
+    "npm audit --json --prefix tracker-api && npm install",
+    "npm audit --json --prefix tracker-api\ntouch /workspace/should-fail.txt",
+    "touch /workspace/should-fail.txt",
+    "git commit -am x",
+    "",
+]
+
+
+def _run_bash_hook(payload_text, tmp_path):
+    env = {
+        "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+        "HOME": str(tmp_path / "home"),
+        "BASH_AUDIT_LOG": str(tmp_path / "bash-audit-log.jsonl"),
+        "CLAUDE_PROJECT_DIR": str(REPO_ROOT),
+    }
+    return subprocess.run(
+        [sys.executable, "-I", str(BASH_HOOK)],
+        input=payload_text,
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=30,
+    )
+
+
+def _bash_payload(agent_type, command):
+    payload = {"hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": {"command": command}}
+    if agent_type is not None:
+        payload["agent_type"] = agent_type
+    return json.dumps(payload)
+
+
+def test_dependency_auditor_definition_matches_policy(policy_roles):
+    fields = _frontmatter(AUDITOR_DEFINITION)
+    assert fields.get("name") == "dependency-auditor"
+    assert _tools(fields) == {"Read", "Grep", "Glob", "Bash"}
+    assert "skills" not in fields
+    assert "dependency-auditor" in policy_roles
+
+
+def test_project_settings_register_bash_hook():
+    settings = json.loads(PROJECT_SETTINGS.read_text(encoding="utf-8"))
+    commands = [
+        hook.get("command", "")
+        for entry in settings["hooks"]["PreToolUse"]
+        if entry.get("matcher") == "Bash"
+        for hook in entry.get("hooks", [])
+        if hook.get("type") == "command"
+    ]
+    assert any("scripts/enforce_bash_scope.py" in command for command in commands)
+
+
+@pytest.mark.parametrize("command", AUDITOR_ALLOWED_COMMANDS)
+def test_bash_hook_allows_auditor_audit_commands(command, tmp_path):
+    result = _run_bash_hook(_bash_payload("dependency-auditor", command), tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == ""
+    records = _audit(tmp_path / "bash-audit-log.jsonl")
+    assert [record["event"] for record in records] == ["bash_command_authorized"]
+    _check_audit_record(records[0])
+
+
+@pytest.mark.parametrize("command", AUDITOR_DENIED_COMMANDS)
+def test_bash_hook_denies_other_auditor_commands(command, tmp_path):
+    result = _run_bash_hook(_bash_payload("dependency-auditor", command), tmp_path)
+    assert result.returncode == 0, result.stderr
+    decision = json.loads(result.stdout)["hookSpecificOutput"]
+    assert decision["permissionDecision"] == "deny"
+    assert decision["permissionDecisionReason"].startswith("bash_command_denied:")
+    records = _audit(tmp_path / "bash-audit-log.jsonl")
+    assert [record["event"] for record in records] == ["bash_command_denied"]
+    assert records[0]["role"] == "dependency-auditor"
+    _check_audit_record(records[0])
+
+
+@pytest.mark.parametrize("agent_type", [None, "implementer", "tester", "marketradar-code-reviewer"])
+def test_bash_hook_does_not_govern_other_roles(agent_type, tmp_path):
+    result = _run_bash_hook(_bash_payload(agent_type, "npm install --prefix tracker-api"), tmp_path)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == ""
+    assert _audit(tmp_path / "bash-audit-log.jsonl") == []
+
+
+@pytest.mark.parametrize("raw", ["", "not json", "[]"], ids=["empty", "not-json", "list"])
+def test_bash_hook_fails_closed_on_unreadable_input(raw, tmp_path):
+    result = _run_bash_hook(raw, tmp_path)
+    assert json.loads(result.stdout)["hookSpecificOutput"]["permissionDecision"] == "deny"
+
+
+def test_storage_explicit_denials_match_policy_tables(policy_roles):
+    allow_list = json.loads((SERVERS_DIR / "storage" / "allow-list.json").read_text(encoding="utf-8"))
+    denials = allow_list.get("explicit_denials", {})
+    assert "dependency-auditor" in denials
+    by_runtime = {role["runtime"]: role for role in policy_roles.values()}
+    for runtime, ops in denials.items():
+        assert runtime in by_runtime, f"explicit denial for a role without a policy entry: {runtime}"
+        policy_denied = {op for op, granted in by_runtime[runtime]["storage"].items() if not granted}
+        assert set(ops) == policy_denied, _grant_diff(f"{runtime} explicit denials", ops, policy_denied)
+        for op in ops:
+            assert runtime not in allow_list[op], f"{runtime} is both granted and denied {op}"

@@ -19,6 +19,7 @@ Source: `docs/governance-policy.md`, each role's "Skill activation scope" table.
 | reviewer (`marketradar-code-reviewer`) | NO | Read-only review role; testing belongs to the Tester. |
 | project-manager | NO | Records outcomes only. |
 | orchestrator (main session) | NO | Verification belongs to the Tester. |
+| dependency-auditor | NO | Inspects dependency manifests; test execution belongs to the Tester. |
 
 Enforcement: the PreToolUse hook `scripts/enforce_skill_scope.py`, registered in `.claude/settings.json`, denies a `Skill` call for `run-tests` unless the hook input's `agent_type` is `tester`, denies the tester any other skill, and writes a `skill_activation_denied` audit record outside the repository. Only the tester's agent definition holds the `Skill` tool.
 

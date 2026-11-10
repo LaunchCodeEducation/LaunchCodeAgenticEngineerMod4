@@ -20,7 +20,7 @@ case "$LAUNCH_NAME" in
     WORKSPACE_MODE="rw"
     MOUNT_MEMORY=1
     ;;
-  planner|tester|project-manager)
+  planner|tester|project-manager|dependency-auditor)
     AGENT_ROLE="$LAUNCH_NAME"
     WORKSPACE_MODE="ro"
     MOUNT_MEMORY=0
