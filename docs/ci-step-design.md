@@ -32,6 +32,8 @@ A job only blocks a merge if it is a required status check in branch protection 
 | Advisory Code Review | no | advisory (`continue-on-error: true`) |
 | Audit Trail | no | observational |
 
+Change Classifier is the only job that does not need policy-gate: it runs first because policy-gate depends on it, and it only lists file names (no agent, no secrets).
+
 ## Step: Policy test suite
 
 - Does: Confirms that `docs/governance-policy.md`, the storage/retrieval/coursetools allow-lists, the skill Activation Scopes, and both `run-agent` scripts all agree (40 checks across 7 roles).
