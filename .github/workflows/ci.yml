@@ -193,5 +193,5 @@ jobs:
     steps:
       - name: Verify secret is present
         env:
-           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: echo "key length: ${#OPENROUTER_API_KEY}"
