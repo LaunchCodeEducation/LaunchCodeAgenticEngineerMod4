@@ -35,3 +35,5 @@ def test_governance_policy_mentions_least_privilege():
 def test_all_required_directories_exist():
     for relative in [".agents", ".skills", "mcp-servers/storage", "mcp-servers/retrieval", "docs/adr"]:
         assert (REPO / relative).exists()
+
+# CI trigger: verifies the eval gate runs on agent-affecting changes.
