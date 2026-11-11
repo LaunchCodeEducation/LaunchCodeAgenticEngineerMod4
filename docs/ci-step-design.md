@@ -17,6 +17,8 @@ Rule used for every classification: deterministic checks may gate immediately; e
 
 Gaps found: no evaluation-harness job exists, so agent-affecting changes (prompts, agents, skills, allow-lists, `eval/`) are never re-checked against the Module 3 harness; and the review step reads `ANTHROPIC_API_KEY` while this course provisions `OPENROUTER_API_KEY`.
 
+MCP server credentials: none required. The coursetools, retrieval and storage FastMCP servers read only non-secret configuration from the environment: file paths (COURSETOOLS_ROOT, COURSETOOLS_ALLOWLIST, *_AUDIT_LOG, STORAGE_STORE) and the role label AGENT_ROLE. None are credentials, so none are registered as secrets (checked 2026-11-10). Only OPENROUTER_API_KEY is registered.
+
 ## Where gating is enforced
 
 A job only blocks a merge if it is a required status check in branch protection for `main`. `continue-on-error: true` only stops a job from failing the run; it does not make anything gating.
