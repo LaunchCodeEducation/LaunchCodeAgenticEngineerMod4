@@ -17,6 +17,19 @@ Rule used for every classification: deterministic checks may gate immediately; e
 
 Gaps found: no evaluation-harness job exists, so agent-affecting changes (prompts, agents, skills, allow-lists, `eval/`) are never re-checked against the Module 3 harness; and the review step reads `ANTHROPIC_API_KEY` while this course provisions `OPENROUTER_API_KEY`.
 
+## Where gating is enforced
+
+A job only blocks a merge if it is a required status check in branch protection for `main`. `continue-on-error: true` only stops a job from failing the run; it does not make anything gating.
+
+| Job | Required status check | Effect |
+|---|---|---|
+| Policy Test Suite | yes | failure blocks merge |
+| Governed File Check | yes | failure blocks merge |
+| Evaluation Harness (deterministic) | yes | failure blocks merge; reports success when skipped for non-agent changes |
+| Evaluation Harness (rubric) | no | advisory |
+| Advisory Code Review | no | advisory (`continue-on-error: true`) |
+| Audit Trail | no | observational |
+
 ## Step: Policy test suite
 
 - Does: Confirms that `docs/governance-policy.md`, the storage/retrieval/coursetools allow-lists, the skill Activation Scopes, and both `run-agent` scripts all agree (40 checks across 7 roles).
@@ -31,7 +44,7 @@ Gaps found: no evaluation-harness job exists, so agent-affecting changes (prompt
 - Does: Runs `eval/test_deterministic.py` (14 structural checks: tool grants, forbidden operations, role order, context bleed, reviewer conflict, similarity floor, output schema, budgets) against the committed holdout transcripts in `.eval-artifacts/runs/holdout/`.
 - Input: whole repository plus the classifier's "agent-affecting change" flag (runs only when `.claude/agents/`, `agents/`, `skills/`, `mcp/`, `mcp-servers/`, `eval/`, or `CLAUDE.md` change).
 - Produces: `deterministic-report.json` artifact.
-- Classification: **gating, conditional.** Deterministic, and it already catches the six calibrated failure modes. Known gap recorded in `docs/calibration-log.md` (HO-05 latency, HO-07 crash) is excluded from the gate until fixed rather than silently ignored.
+- Classification: **gating, conditional.** Deterministic, and it already catches the six calibrated failure modes. Known gap recorded in `docs/calibration-log.md` (HO-05 latency, HO-07 crash) is excluded from the gate until fixed rather than silently ignored. While excluded, both tasks still run and their results appear in `deterministic-report.json` and the audit trail, so a regression stays visible. The exclusion is removed once both pass on three consecutive runs.
 - Time limit: 10 minutes.
 - Credentials: none (reads saved transcripts; makes no model call).
 
@@ -49,7 +62,7 @@ Gaps found: no evaluation-harness job exists, so agent-affecting changes (prompt
 - Does: The reviewer subagent reads the changed files, scores them against the quality rubric, and posts a structured review comment on the pull request.
 - Input: changed files from the Change Classifier.
 - Produces: a PR comment, `review-output.md`, and `review-audit.json`.
-- Classification: **advisory** (`continue-on-error: true`; not a required status check). Its output needs human judgment and its false-positive rate is unmeasured. Promote to gating only after its comments are shown to be reliable over many PRs.
+- Classification: **advisory** (`continue-on-error: true`; not a required status check). Its output needs human judgment and its false-positive rate is unmeasured. Promote to gating only after a human reviewer has labelled its findings on at least 20 PRs and fewer than 10% are false alarms. Results are tracked in `docs/calibration-log.md`.
 - Time limit: 15 minutes.
 - Credentials: `OPENROUTER_API_KEY`, scoped to the reviewer step only; the review script must be migrated from `ANTHROPIC_API_KEY`.
 
@@ -61,3 +74,9 @@ Gaps found: no evaluation-harness job exists, so agent-affecting changes (prompt
 - Classification: **observational; always runs** (`if: always()`), never blocks.
 - Time limit: 5 minutes.
 - Credentials: GitHub token with pull-request comment permission only.
+
+## Considered and not added
+
+- **Dependency auditor in CI:** not added. Its role is advisory by design and it has no output a PR author can act on yet. Revisit once it can write a findings artifact.
+- **Rubric suite as a gate:** not added as a gate. It scored 38/80 on holdout; it stays advisory until it calibrates (see rubric step above).
+- **Live-agent runs on every push:** not added. Too slow and costly for a check that must finish in under 10 minutes; saved holdout transcripts are used instead.
