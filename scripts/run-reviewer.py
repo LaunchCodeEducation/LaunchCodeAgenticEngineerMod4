@@ -4,7 +4,7 @@ Run an advisory agentic code review on changed files.
 
 This script:
 - Reads CHANGED_FILES from the environment.
-- Reads ANTHROPIC_API_KEY from the environment.
+- Reads OPENROUTER_API_KEY from the environment (OpenRouter's Anthropic-compatible endpoint).
 - Reviews only text-like changed files.
 - Writes /out/review-output.md.
 - Writes /out/review-audit.json.
@@ -111,15 +111,15 @@ def collect_file_context(paths: list[str]) -> tuple[str, list[dict]]:
 
 
 def call_anthropic(prompt: str) -> str:
-    api_key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
+    api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
     if not api_key:
         return (
             "## Advisory Code Review\n\n"
-            "No review was performed because `ANTHROPIC_API_KEY` was not available. "
+            "No review was performed because `OPENROUTER_API_KEY` was not available. "
             "Confirm that the repository secret is configured and injected only into this step.\n"
         )
 
-    model = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
+    model = os.environ.get("REVIEW_MODEL", "anthropic/claude-sonnet-4.6")
 
     payload = {
         "model": model,
@@ -133,11 +133,11 @@ def call_anthropic(prompt: str) -> str:
     }
 
     request = urllib.request.Request(
-        "https://api.anthropic.com/v1/messages",
+        "https://openrouter.ai/api/v1/messages",
         data=json.dumps(payload).encode("utf-8"),
         headers={
             "content-type": "application/json",
-            "x-api-key": api_key,
+            "authorization": f"Bearer {api_key}",
             "anthropic-version": "2023-06-01",
         },
         method="POST",
@@ -148,16 +148,15 @@ def call_anthropic(prompt: str) -> str:
             data = json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")
-        return f"## Advisory Code Review\n\nAnthropic API request failed: HTTP {exc.code}\n\n```text\n{detail[:2000]}\n```"
+        return f"## Advisory Code Review\n\nOpenRouter API request failed: HTTP {exc.code}\n\n```text\n{detail[:2000]}\n```"
     except Exception as exc:
-        return f"## Advisory Code Review\n\nAnthropic API request failed: `{exc}`"
+        return f"## Advisory Code Review\n\nOpenRouter API request failed: `{exc}`"
 
     blocks = data.get("content", [])
     text_parts = [b.get("text", "") for b in blocks if b.get("type") == "text"]
     return "\n".join(text_parts).strip() or "No review text was returned."
 
-
-def main() -> int:
+ def main() -> int:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     changed_files = read_changed_files()
@@ -212,7 +211,7 @@ def main() -> int:
         "mode": "advisory",
         "changed_files": changed_files,
         "files": audit_files,
-        "anthropic_key_present": bool(os.environ.get("ANTHROPIC_API_KEY", "").strip()),
+        "openrouter_key_present": bool(os.environ.get("OPENROUTER_API_KEY", "").strip()),
         "output": "/out/review-output.md",
         "exit_behavior": "always_zero_advisory",
     }
