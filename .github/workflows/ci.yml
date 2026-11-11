@@ -186,3 +186,12 @@ jobs:
           path: ci-audit-trail-*.json
           retention-days: 90
           if-no-files-found: error
+
+  verify-secret:
+    name: Verify secret (temporary)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify secret is present
+        env:
+           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: echo "key length: ${#OPENROUTER_API_KEY}"
