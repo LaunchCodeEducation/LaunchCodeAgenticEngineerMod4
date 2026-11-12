@@ -2,17 +2,25 @@
 """Deterministic-gated rubric evaluation. Requires Claude CLI for real judge.
 
 python3 eval/test_rubric_suite.py eval/evidence/development-run.json
+Use --judge openrouter (OPENROUTER_API_KEY, optional OPENROUTER_MODEL) in CI.
 """
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 from test_deterministic import evaluate, load_manifest, ROOT
 
 RUBRIC_PATH = Path(__file__).with_name("rubric.json")
+OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
+# Override with the OPENROUTER_MODEL environment variable. This default slug
+# has not been verified against OpenRouter's model list from this repository.
+DEFAULT_OPENROUTER_MODEL = "anthropic/claude-sonnet-4.5"
 
 
 def validate_scores(judgment, rubric):
@@ -30,6 +38,17 @@ def validate_scores(judgment, rubric):
     return scores
 
 
+def parse_judgment(answer):
+    answer = answer.strip()
+    try:
+        return json.loads(answer)
+    except json.JSONDecodeError:
+        match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", answer, re.S)
+        if match:
+            return json.loads(match.group(1))
+        raise ValueError("Judge did not return valid JSON; raw response not treated as a score")
+
+
 def judge_with_claude(prompt):
     try:
         proc = subprocess.run(["claude", "--print", "--output-format", "text", "--no-session-persistence", "--tools", ""],
@@ -40,14 +59,43 @@ def judge_with_claude(prompt):
         raise RuntimeError("Claude judge timed out after 120 seconds.") from error
     if proc.returncode:
         raise RuntimeError(f"Claude judge exited {proc.returncode}: {proc.stderr[:600]}")
-    answer = proc.stdout.strip()
+    return parse_judgment(proc.stdout)
+
+
+def judge_with_openrouter(prompt):
+    """Judge through OpenRouter's chat completions API. Never logs the key."""
+    api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
+    if not api_key:
+        raise RuntimeError("OPENROUTER_API_KEY is not set; the OpenRouter judge cannot run.")
+    model = os.environ.get("OPENROUTER_MODEL", "").strip() or DEFAULT_OPENROUTER_MODEL
+    body = json.dumps({
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": 0,
+    }).encode("utf-8")
+    request = urllib.request.Request(
+        OPENROUTER_URL,
+        data=body,
+        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+        method="POST",
+    )
     try:
-        return json.loads(answer)
-    except json.JSONDecodeError:
-        match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", answer, re.S)
-        if match:
-            return json.loads(match.group(1))
-        raise ValueError("Judge did not return valid JSON; raw response not treated as a score")
+        with urllib.request.urlopen(request, timeout=120) as response:
+            data = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        raise RuntimeError(f"OpenRouter judge returned HTTP {error.code}.") from error
+    except (urllib.error.URLError, TimeoutError) as error:
+        raise RuntimeError(f"OpenRouter judge request failed: {error}") from error
+    try:
+        answer = data["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError) as error:
+        raise RuntimeError("OpenRouter judge returned no message content.") from error
+    if not isinstance(answer, str):
+        raise RuntimeError("OpenRouter judge returned no message content.")
+    return parse_judgment(answer)
+
+
+JUDGES = {"claude": judge_with_claude, "openrouter": judge_with_openrouter}
 
 
 def run(manifest_path, judge=judge_with_claude):
@@ -96,9 +144,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("manifest", type=Path)
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--judge", choices=sorted(JUDGES), default="claude")
     args = parser.parse_args()
     try:
-        result = run(args.manifest)
+        result = run(args.manifest, judge=JUDGES[args.judge])
     except (OSError, ValueError, RuntimeError, json.JSONDecodeError) as error:
         parser.exit(2, f"Rubric evaluation error: {error}\n")
     report = json.dumps(result, indent=2)

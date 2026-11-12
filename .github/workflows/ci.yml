@@ -14,6 +14,7 @@ jobs:
       changed-files: ${{ steps.classify.outputs.changed-files }}
       requires-governed-check: ${{ steps.classify.outputs.requires-governed-check }}
       touches-policy: ${{ steps.classify.outputs.touches-policy }}
+      agent-affecting: ${{ steps.classify.outputs.agent-affecting }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -46,6 +47,14 @@ jobs:
             echo "touches-policy=false" >> "$GITHUB_OUTPUT"
           fi
 
+          # Agent-affecting changes run the evaluation harness; documentation-only
+          # changes skip it.
+          if echo "$CHANGED" | grep -qE '^(\.claude/|\.agents/|\.skills/|mcp-servers/|eval/|scripts/|docs/governance-policy\.md|docs/routing-and-tool-grant-map\.md|CLAUDE\.md|Dockerfile|docker-entrypoint\.sh|requirements\.txt|\.github/workflows/)'; then
+            echo "agent-affecting=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "agent-affecting=false" >> "$GITHUB_OUTPUT"
+          fi
+
   policy-gate:
     name: Policy Test Suite
     runs-on: ubuntu-latest
@@ -74,6 +83,72 @@ jobs:
         with:
           name: policy-report
           path: ci-artifacts/policy-report.json
+          retention-days: 90
+          if-no-files-found: ignore
+
+  eval-gate:
+    name: Evaluation Harness
+    runs-on: ubuntu-latest
+    needs: [change-type-check, policy-gate]
+    outputs:
+      deterministic-outcome: ${{ steps.deterministic.outcome }}
+      rubric-outcome: ${{ steps.rubric.outcome }}
+    steps:
+      - name: Skip evaluation for documentation-only changes
+        if: needs.change-type-check.outputs.agent-affecting != 'true'
+        run: echo "No agent-affecting files changed; evaluation harness skipped."
+
+      - uses: actions/checkout@v4
+        if: needs.change-type-check.outputs.agent-affecting == 'true'
+
+      - name: Build course container
+        if: needs.change-type-check.outputs.agent-affecting == 'true'
+        run: docker build -t agentic_engineer_4 .
+
+      - name: Run deterministic evaluations
+        id: deterministic
+        if: needs.change-type-check.outputs.agent-affecting == 'true'
+        run: |
+          mkdir -p ci-artifacts
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE":/workspace:ro \
+            -v "$GITHUB_WORKSPACE/ci-artifacts":/reports \
+            -w /workspace \
+            agentic_engineer_4 \
+            python -m pytest eval/test_deterministic.py eval/test_deterministic_router.py eval/test_deterministic_step.py -v \
+              --json-report \
+              --json-report-file=/reports/deterministic-report.json
+
+      # Advisory: the rubric judge is model-backed and evaluates the recorded
+      # Module 3 development run, not this change's agent output.
+      - name: Run rubric evaluation (advisory)
+        id: rubric
+        if: needs.change-type-check.outputs.agent-affecting == 'true' && steps.deterministic.outcome == 'success'
+        continue-on-error: true
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          OPENROUTER_MODEL: ${{ vars.OPENROUTER_MODEL }}
+        run: |
+          mkdir -p ci-artifacts
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE":/workspace:ro \
+            -v "$GITHUB_WORKSPACE/ci-artifacts":/reports \
+            -w /workspace \
+            -e OPENROUTER_API_KEY \
+            -e OPENROUTER_MODEL \
+            agentic_engineer_4 \
+            python eval/module3/test_rubric_suite.py eval/module3/evidence/development-run.json \
+              --judge openrouter \
+              --output /reports/rubric-report.json
+
+      - name: Upload evaluation reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-reports
+          path: |
+            ci-artifacts/deterministic-report.json
+            ci-artifacts/rubric-report.json
           retention-days: 90
           if-no-files-found: ignore
 
@@ -150,7 +225,7 @@ jobs:
   audit-trail:
     name: Audit Trail
     runs-on: ubuntu-latest
-    needs: [change-type-check, policy-gate, governed-file-gate, advisory-review]
+    needs: [change-type-check, policy-gate, eval-gate, governed-file-gate, advisory-review]
     if: always()
     steps:
       - uses: actions/checkout@v4
@@ -175,6 +250,10 @@ jobs:
             --touches-policy "${{ needs.change-type-check.outputs.touches-policy }}" \
             --requires-governed-check "${{ needs.change-type-check.outputs.requires-governed-check }}" \
             --policy-result "${{ needs.policy-gate.result }}" \
+            --agent-affecting "${{ needs.change-type-check.outputs.agent-affecting }}" \
+            --eval-result "${{ needs.eval-gate.result }}" \
+            --deterministic-outcome "${{ needs.eval-gate.outputs.deterministic-outcome }}" \
+            --rubric-outcome "${{ needs.eval-gate.outputs.rubric-outcome }}" \
             --governed-result "${{ needs.governed-file-gate.result }}" \
             --review-result "${{ needs.advisory-review.result }}" \
             --artifacts ci-artifacts

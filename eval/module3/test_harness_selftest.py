@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """Offline integration tests; fake judge results are NOT real rubric scores."""
 import copy
+import io
 import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
 
 from test_deterministic import evaluate
-from test_rubric_suite import run
+from test_rubric_suite import judge_with_openrouter, run
 
 HERE = Path(__file__).resolve().parent
 FIXTURE = HERE / "evidence" / "synthetic-fixture.json"
@@ -58,6 +60,32 @@ class HarnessSelfTests(unittest.TestCase):
             report = run(path, judge=lambda prompt: self.fail("Judge must not run"))
             self.assertFalse(report["rubric_ran"])
             self.assertFalse(report["deterministic"]["passed"])
+
+
+class OpenRouterJudgeTests(unittest.TestCase):
+    def test_missing_key_raises_without_network_call(self):
+        with patch.dict(os.environ, {"OPENROUTER_API_KEY": ""}), \
+                patch("urllib.request.urlopen") as urlopen:
+            with self.assertRaises(RuntimeError):
+                judge_with_openrouter("prompt")
+            urlopen.assert_not_called()
+
+    def test_parses_json_scores_from_response(self):
+        payload = {"choices": [{"message": {"content": '{"scores": []}'}}]}
+
+        class FakeResponse(io.BytesIO):
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc):
+                return False
+
+        with patch.dict(os.environ, {"OPENROUTER_API_KEY": "test-key", "OPENROUTER_MODEL": "test/model"}), \
+                patch("urllib.request.urlopen", return_value=FakeResponse(json.dumps(payload).encode())) as urlopen:
+            self.assertEqual(judge_with_openrouter("prompt"), {"scores": []})
+        sent = json.loads(urlopen.call_args.args[0].data)
+        self.assertEqual(sent["model"], "test/model")
+        self.assertEqual(urlopen.call_args.args[0].get_header("Authorization"), "Bearer test-key")
 
 
 if __name__ == "__main__":

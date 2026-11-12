@@ -39,17 +39,16 @@ def test_workflow_does_not_hardcode_anthropic_key():
 
 
 def test_policy_gate_is_not_continue_on_error():
-    workflow = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    import yaml
 
-    policy_section_start = workflow.find("policy-gate:")
-    assert policy_section_start != -1, "Missing policy-gate job"
-
-    next_job_start = workflow.find("\n  governed-file-gate:", policy_section_start)
-    section = workflow[policy_section_start:next_job_start]
-
-    assert "continue-on-error: true" not in section, (
-        "policy-gate must remain a real gate, not advisory."
-    )
+    workflow = yaml.safe_load((ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8"))
+    job = workflow["jobs"].get("policy-gate")
+    assert job is not None, "Missing policy-gate job"
+    assert job.get("continue-on-error") is not True, "policy-gate must remain a real gate, not advisory."
+    for step in job.get("steps", []):
+        assert step.get("continue-on-error") is not True, (
+            f"policy-gate step {step.get('name')!r} must not use continue-on-error."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -909,3 +908,116 @@ def test_storage_explicit_denials_match_policy_tables(policy_roles):
         assert set(ops) == policy_denied, _grant_diff(f"{runtime} explicit denials", ops, policy_denied)
         for op in ops:
             assert runtime not in allow_list[op], f"{runtime} is both granted and denied {op}"
+
+
+# ---------------------------------------------------------------------------
+# Module 4.2: Evaluation Harness gating job (eval-gate).
+# ---------------------------------------------------------------------------
+
+import yaml
+
+WORKFLOW_PATH = REPO_ROOT / ".github" / "workflows" / "ci.yml"
+DETERMINISTIC_EVAL_FILES = [
+    "eval/test_deterministic.py",
+    "eval/test_deterministic_router.py",
+    "eval/test_deterministic_step.py",
+]
+
+
+def _workflow():
+    return yaml.safe_load(WORKFLOW_PATH.read_text(encoding="utf-8"))
+
+
+def _step(job, step_id):
+    return next(step for step in job["steps"] if step.get("id") == step_id)
+
+
+def _agent_affecting_pattern():
+    classify = next(
+        step for step in _workflow()["jobs"]["change-type-check"]["steps"] if step.get("id") == "classify"
+    )
+    match = re.search(r"grep -qE '([^']+)'; then\s*\n\s*echo \"agent-affecting=true\"", classify["run"])
+    assert match, "change-type-check has no agent-affecting classification"
+    return re.compile(match.group(1))
+
+
+def test_eval_gate_reports_on_every_run_after_policy_gate():
+    jobs = _workflow()["jobs"]
+    job = jobs["eval-gate"]
+    assert set(job["needs"]) == {"change-type-check", "policy-gate"}
+    assert "if" not in job, "eval-gate must have no job-level condition so it reports on every run"
+    assert job.get("continue-on-error") is not True
+    assert "agent-affecting" in jobs["change-type-check"]["outputs"]
+
+
+def test_eval_gate_deterministic_step_is_gating_and_runs_in_docker():
+    step = _step(_workflow()["jobs"]["eval-gate"], "deterministic")
+    assert step.get("continue-on-error") is not True
+    assert "docker run" in step["run"] and "agentic_engineer_4" in step["run"]
+    assert ":/workspace:ro" in step["run"]
+    for path in DETERMINISTIC_EVAL_FILES:
+        assert path in step["run"]
+    assert "env" not in step
+
+
+def test_eval_gate_rubric_step_is_advisory_and_runs_in_docker():
+    step = _step(_workflow()["jobs"]["eval-gate"], "rubric")
+    assert step.get("continue-on-error") is True
+    assert "docker run" in step["run"] and "agentic_engineer_4" in step["run"]
+    assert "--judge openrouter" in step["run"]
+    assert "steps.deterministic.outcome == 'success'" in step["if"]
+
+
+def test_openrouter_key_is_scoped_to_the_rubric_step_only():
+    workflow = _workflow()
+    assert "OPENROUTER_API_KEY" not in json.dumps(workflow.get("env", {}))
+    holders = []
+    for job_name, job in workflow["jobs"].items():
+        assert "OPENROUTER_API_KEY" not in json.dumps(job.get("env", {})), f"{job_name} exposes the key job-wide"
+        for step in job.get("steps", []):
+            if "OPENROUTER_API_KEY" in json.dumps(step.get("env", {})):
+                holders.append((job_name, step.get("id")))
+    assert holders == [("eval-gate", "rubric")]
+    rubric_env = _step(workflow["jobs"]["eval-gate"], "rubric")["env"]
+    assert rubric_env["OPENROUTER_API_KEY"] == "${{ secrets.OPENROUTER_API_KEY }}"
+
+
+def test_eval_reports_upload_always_and_ignore_missing():
+    upload = next(
+        step for step in _workflow()["jobs"]["eval-gate"]["steps"]
+        if str(step.get("uses", "")).startswith("actions/upload-artifact")
+    )
+    assert upload["if"] == "always()"
+    assert upload["with"]["if-no-files-found"] == "ignore"
+    assert "deterministic-report.json" in upload["with"]["path"]
+    assert "rubric-report.json" in upload["with"]["path"]
+
+
+@pytest.mark.parametrize(
+    "path, expected",
+    [
+        ("docs/ci-step-design.md", False),
+        ("README.md", False),
+        ("docs/module3/holdout-task-set.md", False),
+        ("tracker-client/src/App.tsx", False),
+        (".claude/agents/tester.md", True),
+        (".claude/settings.json", True),
+        ("scripts/enforce_bash_scope.py", True),
+        ("mcp-servers/storage/allow-list.json", True),
+        ("eval/test_policy.py", True),
+        ("docs/governance-policy.md", True),
+        ("CLAUDE.md", True),
+        ("Dockerfile", True),
+        (".github/workflows/ci.yml", True),
+    ],
+)
+def test_change_classifier_separates_agent_affecting_from_docs_only(path, expected):
+    assert bool(_agent_affecting_pattern().match(path)) is expected
+
+
+def test_audit_trail_records_eval_gate():
+    job = _workflow()["jobs"]["audit-trail"]
+    assert "eval-gate" in job["needs"]
+    assert job["if"] == "always()"
+    command = next(step["run"] for step in job["steps"] if "build-audit-trail.py" in str(step.get("run", "")))
+    assert "--eval-result" in command and "needs.eval-gate.result" in command
