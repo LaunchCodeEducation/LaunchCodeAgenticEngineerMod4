@@ -45,3 +45,7 @@ Cross-role check:
 Alternative considered: granting the Tester `retrieve`. Ruled out because the Tester receives acceptance criteria in its task brief and records results against them. An independent corpus search adds a capability the role does not require.
 
 Alternative considered: raising the Reviewer ceiling to `confidential` for cost reviews. Ruled out because no review task in this workflow needs cost figures; the confidential cost document stays out of reach unless a specific task justifies an exception.
+
+## Deterministic steps (no MCP access)
+
+- citation_list assembly: converted from an instruction inside every role's prompt to deterministic code in the orchestrator (ADR-003, `scripts/assemble_citations.py`). It reads only the role's own tool-call results already held in memory and holds no MCP grant. No role's grant changed: there was never a separate citation subagent.
