@@ -1,0 +1,8 @@
+{"timestamp": "2026-11-15T07:28:34.558144+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "fake-001", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-15T07:28:54.220721+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "fake-001", "classification": "internal", "calling_role": "implementer"}
+{"timestamp": "2026-11-15T07:29:05.220410+00:00", "operation": "update_entry", "project_id": "default", "entry_id": "fake-001", "classification": "internal", "calling_role": "implementer"}
+{"timestamp": "2026-11-15T07:29:18.841708+00:00", "operation": "write_entry", "project_id": "default", "entry_id": "123a13c8-f698-4931-8fba-2f5ddd596ef4", "classification": "internal", "calling_role": "implementer"}
+{"timestamp": "2026-11-15T07:29:30.466376+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "fake-001", "classification": "internal", "calling_role": "reviewer"}
+{"timestamp": "2026-11-15T07:29:30.466411+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "123a13c8-f698-4931-8fba-2f5ddd596ef4", "classification": "internal", "calling_role": "reviewer"}
+{"timestamp": "2026-11-15T07:29:59.852529+00:00", "operation": "read_entry", "project_id": "fake-001", "entry_id": "fake-001", "classification": "internal", "calling_role": "tester"}
+{"timestamp": "2026-11-15T07:29:59.852615+00:00", "operation": "read_entry", "project_id": "fake-001", "entry_id": "123a13c8-f698-4931-8fba-2f5ddd596ef4", "classification": "internal", "calling_role": "tester"}

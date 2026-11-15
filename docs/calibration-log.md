@@ -150,3 +150,12 @@ Rules: one induced fault and one fix per cycle; fix the right layer
 - **Latency:** 398 ms per invocation including Python start-up on the Windows host; 0 model calls, 0 tokens.
 - **CI:** deterministic gate 39/39 with these tests included (PR #12).
 - **Rubric:** prose-quality dimensions are not applicable to a structured field and are marked N/A, not scored as zero.
+
+### 2026-11-15: End-to-end regression check (integrated orchestrator, after PR #13)
+- **Runs** (course container, live model via OpenRouter, deterministic citation step in place): holdout E2E-HO-01 (31.2 s) and E2E-HO-02 (173.6 s); development E2E-REGRESSION-default (120.5 s) and E2E-LAB-delete (123.2 s). Transcripts, audit logs and reports are in `.eval-artifacts/runs/e2e/`.
+- **Scoring:** `scripts/e2e_regression_check.py`, using the deterministic assertions written in `docs/holdout-task-set.md` plus seam checks for the integrated step, compared against the committed baselines. Holdout 15/16, development 10/10, **regressions vs baseline: 0**. Fixed compared with baseline: `citation_list_set_by_deterministic_step` (HO-02, default task) and `no_invented_citations` (default task).
+- **Pre-existing failure, not a regression:** HO-02.3 ("exactly one implementer write_entry") failed in the baseline (3 writes) and still fails (2 writes). The audit log records both writes with a valid classification (`internal`); the checker reads transcript tool events, which do not store call inputs, hence its `[None]`. Unrelated to citations.
+- **Lesson suites:** `pytest eval/test_deterministic.py eval/test_rubric_suite.py eval/test_citation_assembly.py` 25/25; `pytest eval/test_policy.py` 40/40 (no stale references).
+- **Governance held:** on the lab task the implementer was not offered `delete_entry` and did not call it (fix 034729f).
+- **Honest scope:** the Module 3 rubric judge and the 14 transcript checks are not in this repository (`eval/run_holdout.py` imports functions that do not exist), so the regression used the documented holdout assertions and seam checks instead. Tracked as a known gap in `docs/ci-step-design.md`.
+- **Latency note:** HO-02 took 173.6 s, close to the 180 s budget; the conversion adds no model calls, so this is not attributable to it.
