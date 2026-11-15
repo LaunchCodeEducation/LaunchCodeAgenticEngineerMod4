@@ -1,11 +1,13 @@
 # Step Classification: FashionMate Agentic Harness
 
 Author: swarna. Date: 2026-11-14.
+
+**How this document is maintained.** This document is updated after every calibration cycle. Steps that cross the stability threshold are promoted to candidate status. A step that has been a candidate for more than two calibration cycles without meeting all four signals is reviewed for re-scoping: either it moves back to the agent column as judgment work, or its scope is narrowed until it can stabilize. Every agent-classified step carries a specific next-review date, and any step is re-checked early after a major workflow change. Last updated: 2026-11-15 (citation list assembly conversion recorded, ADR-003).
 Source of the step list: `docs/orchestration-diagram.md` (walked from the parent outward), `eval/orchestrator.py`, `.claude/agents/`, and the CI pipeline in `.github/workflows/ci.yml`.
 
 **Method.** Every step is tested against the four signals: stability, repeatability, specifiability, high run rate. Evidence comes from the Module 3 calibration log (`docs/calibration-log.md`), the Module 4 calibration log, and a read-only analysis of the committed run transcripts (30 with role outputs) in `.eval-artifacts/runs/` (`scripts/analyze_citations.py`, no model calls). Those transcripts were produced by `eval/orchestrator.py` inside the course container during calibration, so the behavior measured is the behavior that would be converted.
 
-**Summary.** 15 steps listed: 9 agentic, 6 already deterministic. **1 strong candidate** (citation list assembly), 2 weak candidates (tester, project manager), 6 not candidates.
+**Summary.** 15 steps listed. As of 2026-11-15: 8 agentic, 7 deterministic (citation list assembly converted under ADR-003). Open candidates: 2 weak (tester, project manager); 6 not candidates. Original audit (2026-11-14): 9 agentic, 6 deterministic, 1 strong candidate.
 
 | # | Step | Kind today | Recommendation |
 |---|---|---|---|
@@ -15,7 +17,7 @@ Source of the step list: `docs/orchestration-diagram.md` (walked from the parent
 | 4 | Handoff / output schema validation | Deterministic (`test_deterministic_step.py`, `output_schema` check) | Already deterministic |
 | 5 | Reviewer-conflict escalation | Deterministic (fix a5e0643) | Already deterministic |
 | 6 | Retrieval similarity floor + keyword fallback | Deterministic (fix ecb7e5f) | Already deterministic |
-| 7 | **Citation list assembly** (each role's `citation_list`) | **Agentic** (prompt line 385) | **Strong candidate** |
+| 7 | Citation list assembly (each role's `citation_list`) | Deterministic (`scripts/assemble_citations.py`, ADR-003) | **Converted 2026-11-15** |
 | 8 | Tester (run tests, report pass/fail) | Agentic | Weak candidate |
 | 9 | Project manager (update ticket status) | Agentic | Weak candidate |
 | 10 | Planner | Agentic | Not a candidate |
@@ -28,6 +30,12 @@ Source of the step list: `docs/orchestration-diagram.md` (walked from the parent
 ---
 
 ## Step: Citation list assembly (each role's `citation_list`)
+
+- **Status: Converted to deterministic (ADR-003, 2026-11-15).** `scripts/assemble_citations.py`, called by `eval/orchestrator.py` after each role finishes (PR #13). Decision and evidence: `docs/adr/ADR-003-citation-list-deterministic-conversion.md`; before/after measurements and the end-to-end regression check (0 regressions) in `docs/calibration-log.md`.
+- **Preserved edge cases:** a role with no `retrieve` call gets `[]` (inherited upstream citations are not copied); storage entry IDs are never cited; rows whose `source_document` is missing, non-string, or blank/whitespace-only are skipped rather than guessed at. All covered by `eval/test_citation_assembly.py` (20 tests, part of the CI deterministic gate).
+- **Next review:** none as an agent step. Re-open only if the `retrieve` result format changes or an `inherited_citations` field is requested (out of scope per ADR-003).
+
+The assessment below is the original classification (2026-11-14), kept as the record of why the step was converted.
 
 What it does today: every role is told in `_FINALIZE_INSTRUCTIONS` (eval/orchestrator.py, line 385): *"For roles using retrieve, list the source_document names in citation_list."* The model writes the list itself.
 
@@ -47,7 +55,7 @@ What it does today: every role is told in `_FINALIZE_INSTRUCTIONS` (eval/orchest
 - **Specifiability:** one-paragraph spec (Rule A), written so a developer could implement it without questions: *For each role's output, `citation_list` is the list of `source_document` values from that role's own `retrieve` tool results in the current run, deduplicated, in order of first appearance. If the role made no `retrieve` calls, it is `[]`. Results withheld by the classification ceiling are never returned by `retrieve`, so they cannot appear. The model no longer writes this field; the orchestrator sets it after the role finishes, overwriting anything the model produced.*
 - **Run rate:** runs on every role output in every orchestrator run: 4 per standard run, 5 on the five-role path, and on every holdout and regression run. Many times per day during development and every CI evaluation.
 - **Known agent judgment / edge-case input the deterministic version must preserve:** a role that did **not** call `retrieve` but built on documents passed down in its handoff (implementer, tester, reviewer). The agent *sometimes* carried the planner's citations forward (8 outputs cited real documents with no `retrieve` call), which looks like provenance-tracking judgment, but it did so inconsistently (the "own + inherited" Rule B matched only 48.4%). The deterministic version must make this explicit rather than lose it silently: `citation_list` = own retrievals only (matching the written spec), and upstream provenance stays available through the scoped handoff chain. A second edge case: a role that read **storage entries** (`read_entry`) and cited their IDs. Storage entries are not documents, so the deterministic version does not list them; this is a deliberate change from the agent's occasional behavior and is recorded in the ADR.
-- **Recommendation: strong candidate.** All four signals are met, the correct output is a lookup over data the orchestrator already holds, and converting it removes one of the six Module 3 failure modes (schema validation) by design instead of by prompt wording.
+- **Original recommendation (2026-11-14): strong candidate.** All four signals are met, the correct output is a lookup over data the orchestrator already holds, and converting it removes one of the six Module 3 failure modes (schema validation) by design instead of by prompt wording.
 
 ## Step: Tester (run tests, report pass/fail)
 
@@ -57,6 +65,7 @@ What it does today: every role is told in `_FINALIZE_INSTRUCTIONS` (eval/orchest
 - **Run rate:** every standard run.
 - **Edge case to preserve:** pytest exit code 5 ("no tests collected"). An agent can report "no tests apply to this change"; a naive script would treat it as a failure or a pass.
 - **Recommendation: weak candidate.** To qualify: give the tester a real test-runner tool in the harness and complete two calibration cycles comparing its reported result to the actual pytest exit code.
+- **Candidate since:** 2026-11-14. **Next review:** 2026-12-15 (near: a weak candidate that could qualify once it has a real test-runner tool and two calibration cycles).
 
 ## Step: Project manager (update ticket status)
 
@@ -66,6 +75,7 @@ What it does today: every role is told in `_FINALIZE_INSTRUCTIONS` (eval/orchest
 - **Run rate:** low; only on the five-role path.
 - **Edge case to preserve:** `escalated_to_human = true` must produce a "needs human review" status, never "done".
 - **Recommendation: weak candidate.** To qualify: fix the HO-07 crash, complete two calibration cycles on the five-role path, and confirm the run rate justifies it.
+- **Candidate since:** 2026-11-14. **Next review:** 2026-12-15 (near: re-check after the HO-07 crash is fixed and the five-role path completes two calibration cycles).
 
 ## Step: Planner
 
@@ -75,6 +85,7 @@ What it does today: every role is told in `_FINALIZE_INSTRUCTIONS` (eval/orchest
 - **Run rate:** every run.
 - **Edge case:** not applicable (not converting).
 - **Recommendation: not a candidate.** Its retrieval-citation sub-task is covered by step 7.
+- **Next review:** 2027-02-15 (distant: open-ended planning is judgment work and unlikely to become specifiable soon).
 
 ## Step: Implementer
 
@@ -82,6 +93,7 @@ What it does today: every role is told in `_FINALIZE_INSTRUCTIONS` (eval/orchest
 - **Specifiability:** no. Writing code to a plan is judgment work.
 - **Run rate:** every run.
 - **Recommendation: not a candidate.**
+- **Next review:** 2027-02-15 (distant: writing code to a plan stays judgment work).
 
 ## Step: Reviewer (and the strict/lenient pair)
 
@@ -89,12 +101,14 @@ What it does today: every role is told in `_FINALIZE_INSTRUCTIONS` (eval/orchest
 - **Specifiability:** no. Judging code quality has contested criteria.
 - **Run rate:** every run.
 - **Recommendation: not a candidate.** (The conflict *resolution* is already deterministic, step 5.)
+- **Next review:** 2027-02-15 (distant: contested quality criteria).
 
 ## Step: Researcher (optional stretch)
 
 - **Specifiability:** no. Open-ended external documentation questions.
 - **Run rate:** rare (only on a research blocker).
 - **Recommendation: not a candidate.**
+- **Next review:** 2027-05-15 (distant and low priority: rare run rate).
 
 ## Step: Advisory code review (CI)
 
@@ -102,18 +116,20 @@ What it does today: every role is told in `_FINALIZE_INSTRUCTIONS` (eval/orchest
 - **Specifiability:** no. Open-ended review.
 - **Run rate:** every pull request.
 - **Recommendation: not a candidate.** It stays agentic and advisory (see `docs/ci-step-design.md`).
+- **Next review:** 2027-02-15 (distant: re-check the false-positive rate in the calibration log before then).
 
 ## Step: Rubric judge
 
 - **Specifiability:** no. Scores correctness, adherence, groundedness and clarity.
 - **Stability:** judge-bias risk noted in Module 3 (loads project CLAUDE.md).
 - **Recommendation: not a candidate.**
+- **Next review:** 2027-02-15 (distant: scoring prose quality needs judgment).
 
 ---
 
 ## Already deterministic (listed to keep the picture honest)
 
-Orchestrator sequencing, file-path routing, scoped handoff construction, handoff/output schema validation, reviewer-conflict escalation, and the retrieval similarity floor with keyword fallback are already plain code with deterministic tests. The target state is a mixed workflow: judgment steps stay agentic, rule steps are code, and humans review escalations.
+Orchestrator sequencing, file-path routing, scoped handoff construction, handoff/output schema validation, reviewer-conflict escalation, the retrieval similarity floor with keyword fallback, and (since ADR-003, 2026-11-15) citation list assembly are plain code with deterministic tests. The target state is a mixed workflow: judgment steps stay agentic, rule steps are code, and humans review escalations.
 
 ## Reproducing the evidence
 
