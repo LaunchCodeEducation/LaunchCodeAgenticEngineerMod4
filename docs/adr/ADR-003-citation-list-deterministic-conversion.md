@@ -1,7 +1,7 @@
 # ADR-003: Convert citation list assembly from agent to deterministic code
 
 ## Status
-Proposed
+Accepted
 
 ## Context
 
@@ -22,9 +22,9 @@ Replace the agent-written `citation_list` with a deterministic function in the o
 
 Expected benefits: every citation is verifiable, because it can only name a document the role actually retrieved; output is perfectly repeatable for the same tool calls; the Module 3 "schema validation" failure mode is removed by design instead of by prompt wording; the harness can check citations exactly instead of only checking that the field exists; and a reviewer can understand the step by reading a few lines of code. Token and latency savings are expected to be small, because the list is produced inside the same model call as the summary; the case for conversion is correctness and repeatability, not cost.
 
-Known trade-offs: the agent's occasional carrying-forward of upstream citations (8 outputs) is dropped from `citation_list`. If the team later wants explicit upstream provenance, it should be a separate deterministic field (for example `inherited_citations`), not a return to the agent. If retrieval semantics change (for example, roles start using only part of what they retrieve, and "cited" should mean "used"), the rule must be revisited, and that judgment might belong back with an agent.
+Known trade-offs: the agent's occasional carrying-forward of upstream citations (8 outputs) is dropped from `citation_list`. Scope decision recorded at acceptance: an `inherited_citations` field is out of scope for this ADR (owner: swarna). Upstream provenance remains available through the scoped handoff chain; if it is later needed in outputs, it will be a separate deterministic field under a new ADR, not a return to the agent. If retrieval semantics change (for example, roles start using only part of what they retrieve, and "cited" should mean "used"), the rule must be revisited, and that judgment might belong back with an agent.
 
-To watch before integration: the unit tests and the transcript replay pass; the 14 deterministic checks still pass. To accept the ADR later: the integrated orchestrator passes an end-to-end regression run with no new failures, citation correctness measured by `scripts/analyze_citations.py` on the new transcripts is 100%, the rubric's groundedness score does not drop, and `docs/routing-and-tool-grant-map.json`, the governance policy and `docs/ci-step-design.md` stay consistent.
+To watch before integration: the unit tests and the transcript replay pass; the 14 deterministic checks still pass. Acceptance criteria, revised at acceptance to avoid circular evidence (raised in the advisory review of this ADR): once the orchestrator writes `citation_list` with the same rule, measuring "correctness" with `scripts/analyze_citations.py` would be 100% by construction and prove nothing. Acceptance therefore rests on: the 20 unit tests and the replay; no regression in the deterministic gate (39/39); the integrated workflow passing the documented holdout assertions with 0 regressions against the baselines; the policy suite (40/40); and governance artifacts updated in the same commit as the code (PR #13). All were met.
 
 ## Evidence
 
@@ -32,4 +32,7 @@ To watch before integration: the unit tests and the transcript replay pass; the 
 - `scripts/analyze_citations.py` (reads committed transcripts, no model calls): 84/122 (68.9%) exact match with Rule A; 59/122 (48.4%) with Rule B; difference categories; repeatability on the default task (tester 5 distinct lists vs 1 justified).
 - `docs/calibration-log.md`, cycle entry "2026-11-07: Schema validation failure" (fix 2e31057): the earlier failure of this same field, fixed by prompt wording.
 - `eval/orchestrator.py`, line 385: the instruction being replaced.
-- Measured before/after comparison and the implementation commit: to be cited after the measurement section of this lesson.
+- Before-conversion measurement: `docs/calibration-log.md`, "ADR-003: citation_list conversion measurements", commit 50bbc35.
+- After-conversion measurement in isolation: same section, commit 50bbc35; implementation and tests in PR #12.
+- Integration: PR #13 (orchestrator, prompt, routing map and policy in one commit).
+- Integrated end-to-end regression check: `docs/calibration-log.md`, "End-to-end regression check", commit 2695293; artifacts in `.eval-artifacts/runs/e2e/`.
