@@ -45,6 +45,11 @@ from pathlib import Path
 
 import anthropic
 
+# ADR-003: citation_list is computed deterministically, not written by the model.
+import os as _os, sys as _sys
+_sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "..", "scripts"))
+from assemble_citations import apply_citations  # noqa: E402
+
 # ── model ────────────────────────────────────────────────────────────────────
 
 MODEL = "anthropic/claude-sonnet-4.6"
@@ -372,8 +377,7 @@ After you finish using tools, output your final response as a JSON block in this
 {
   "handoff": "One or two sentences summarising what you did for the next agent.",
   "output_document": {
-    "summary": "A concise paragraph describing what you found, decided, or verified.",
-    "citation_list": []
+    "summary": "A concise paragraph describing what you found, decided, or verified."
   },
   "review_items": []
 }
@@ -382,8 +386,7 @@ After you finish using tools, output your final response as a JSON block in this
 For the Reviewer role only, populate review_items like:
 [{"section": "implementation", "verdict": "approve"}]
 
-For roles using retrieve, list the source_document names in citation_list.
-Field names are a strict contract: use exactly "summary" (string) and "citation_list" (list). Do not rename them (e.g. not "citations").
+Field names are a strict contract: use exactly "summary" (string). Do not write citation_list: the orchestrator sets it from your own retrieve results (ADR-003).
 """
 
 
@@ -509,6 +512,8 @@ def run_role(
     next_handoff = parsed.get("handoff", "")
     output_document = parsed.get("output_document", {"summary": final_text[:500], "citation_list": []})
     review_items = parsed.get("review_items", [])
+    # ADR-003: overwrite whatever the model wrote with the deterministic list.
+    output_document = apply_citations(output_document, tool_events)
 
     print(f"  [{role}] done. handoff: {next_handoff[:80]}...", flush=True)
     return next_handoff, output_document, review_items, tool_events

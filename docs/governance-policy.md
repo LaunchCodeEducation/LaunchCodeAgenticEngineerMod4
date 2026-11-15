@@ -312,6 +312,7 @@ Roles in this orchestration (7): orchestrator, planner, implementer, reviewer, t
 ## Deterministic conversion history
 
 - `validator`: converted from agent to deterministic code. See `docs/adr/ADR-001-json-schema-validation-deterministic-conversion.md`. No MCP access required.
+- citation_list assembly (part of every role output): converted from a model-written field to deterministic code in the orchestrator (`scripts/assemble_citations.py`). See `docs/adr/ADR-003-citation-list-deterministic-conversion.md`. No role was removed, and no MCP grant or CI secret was ever attached to this step, so none needed revoking.
 
 ## Policy maintenance
 
