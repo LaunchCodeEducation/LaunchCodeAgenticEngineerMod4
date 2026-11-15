@@ -1,0 +1,8 @@
+{"timestamp": "2026-11-15T07:24:21.404002+00:00", "operation": "read_entry", "project_id": "default", "entry_id": "fake-001", "classification": "internal", "calling_role": "planner"}
+{"timestamp": "2026-11-15T07:24:58.282885+00:00", "operation": "read_entry", "project_id": "glamup", "entry_id": "fake-001", "classification": "internal", "calling_role": "implementer"}
+{"timestamp": "2026-11-15T07:25:29.912040+00:00", "operation": "write_entry", "project_id": "glamup", "entry_id": "72049c5a-0db2-44c2-a41b-12f9a35bcb0c", "classification": "internal", "calling_role": "implementer"}
+{"timestamp": "2026-11-15T07:25:29.912524+00:00", "operation": "write_entry", "project_id": "glamup", "entry_id": "b1091d5b-9916-47b2-901b-aae42dbe2b6e", "classification": "internal", "calling_role": "implementer"}
+{"timestamp": "2026-11-15T07:25:42.288105+00:00", "operation": "read_entry", "project_id": "glamup", "entry_id": "72049c5a", "classification": "internal", "calling_role": "reviewer"}
+{"timestamp": "2026-11-15T07:25:42.288136+00:00", "operation": "read_entry", "project_id": "glamup", "entry_id": "b1091d5b", "classification": "internal", "calling_role": "reviewer"}
+{"timestamp": "2026-11-15T07:26:36.639099+00:00", "operation": "read_entry", "project_id": "glamup", "entry_id": "72049c5a-0db2-44c2-a41b-12f9a35bcb0c", "classification": "internal", "calling_role": "tester"}
+{"timestamp": "2026-11-15T07:26:36.639188+00:00", "operation": "read_entry", "project_id": "glamup", "entry_id": "b1091d5b-9916-47b2-901b-aae42dbe2b6e", "classification": "internal", "calling_role": "tester"}

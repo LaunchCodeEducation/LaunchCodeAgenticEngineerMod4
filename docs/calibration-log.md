@@ -135,3 +135,27 @@ Rules: one induced fault and one fix per cycle; fix the right layer
 ## CI infrastructure flakes
 
 - 2026-11-11: run #27 (acaea2d, main) Governed File Check failed with 'No space left on device' on the GitHub runner. Infrastructure flake, not a gate failure; re-ran the failed job and did not bypass the gate. Fix: 'Free disk space' step before each container build (PR on branch ci/free-disk-space).
+
+## ADR-003: citation_list conversion measurements
+
+### 2026-11-15: Before conversion (agent-written citation_list)
+- **Scope:** 122 role outputs in 30 committed transcripts under `.eval-artifacts/runs/`, measured by `scripts/analyze_citations.py` (reads saved transcripts, no model calls).
+- **Spec conformance (Rule A: the role's own retrieved documents):** 84/122 (68.9%) exact match. Deviations: 12 same documents in a different order, 9 storage entry IDs cited as documents, 8 real documents cited by a role that made no `retrieve` call, 5 paraphrased or invented names, 4 missing `citation_list`.
+- **Repeatability (default development task, same input, 7 runs):** tester wrote 5 distinct lists where its own retrievals justify 1; implementer 4 vs 2; reviewer 2 vs 2; planner 1 vs 1.
+- **Latency and cost:** the list was written inside the role's own model call, so it has no separate latency; token cost is not recorded by this harness (see the 2026-11-07 Calibration Summary: the cost check is vacuous).
+
+### 2026-11-15: After conversion, measured in isolation (`scripts/assemble_citations.py`)
+- **Unit tests:** 20/20 in the course container: holdout-derived (HO-01 to HO-06), the ADR-003 edge cases, the flagged limitation (inherited citations, storage IDs, paraphrased names), a replay over every committed transcript, and the file-in / file-out contract.
+- **Repeatability:** 3 runs on HO-01 produced identical output (`fc`: no differences encountered).
+- **Latency:** 398 ms per invocation including Python start-up on the Windows host; 0 model calls, 0 tokens.
+- **CI:** deterministic gate 39/39 with these tests included (PR #12).
+- **Rubric:** prose-quality dimensions are not applicable to a structured field and are marked N/A, not scored as zero.
+
+### 2026-11-15: End-to-end regression check (integrated orchestrator, after PR #13)
+- **Runs** (course container, live model via OpenRouter, deterministic citation step in place): holdout E2E-HO-01 (31.2 s) and E2E-HO-02 (173.6 s); development E2E-REGRESSION-default (120.5 s) and E2E-LAB-delete (123.2 s). Transcripts, audit logs and reports are in `.eval-artifacts/runs/e2e/`.
+- **Scoring:** `scripts/e2e_regression_check.py`, using the deterministic assertions written in `docs/holdout-task-set.md` plus seam checks for the integrated step, compared against the committed baselines. Holdout 15/16, development 10/10, **regressions vs baseline: 0**. Fixed compared with baseline: `citation_list_set_by_deterministic_step` (HO-02, default task) and `no_invented_citations` (default task).
+- **Pre-existing failure, not a regression:** HO-02.3 ("exactly one implementer write_entry") failed in the baseline (3 writes) and still fails (2 writes). The audit log records both writes with a valid classification (`internal`); the checker reads transcript tool events, which do not store call inputs, hence its `[None]`. Unrelated to citations.
+- **Lesson suites:** `pytest eval/test_deterministic.py eval/test_rubric_suite.py eval/test_citation_assembly.py` 25/25; `pytest eval/test_policy.py` 40/40 (no stale references).
+- **Governance held:** on the lab task the implementer was not offered `delete_entry` and did not call it (fix 034729f).
+- **Honest scope:** the Module 3 rubric judge and the 14 transcript checks are not in this repository (`eval/run_holdout.py` imports functions that do not exist), so the regression used the documented holdout assertions and seam checks instead. Tracked as a known gap in `docs/ci-step-design.md`.
+- **Latency note:** HO-02 took 173.6 s, close to the 180 s budget; the conversion adds no model calls, so this is not attributable to it.

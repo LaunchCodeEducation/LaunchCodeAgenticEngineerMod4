@@ -1,0 +1,117 @@
+{
+  "regressions": 0,
+  "results": [
+    {
+      "transcript": "E2E-HO-01.json",
+      "check": "run_completed",
+      "passed": true,
+      "baseline_passed": true,
+      "detail": "1 role output(s)"
+    },
+    {
+      "transcript": "E2E-HO-01.json",
+      "check": "role_order_matches_expected_path",
+      "passed": true,
+      "baseline_passed": true,
+      "detail": "ran ['planner'], expected ['planner']"
+    },
+    {
+      "transcript": "E2E-HO-01.json",
+      "check": "output_schema_summary_and_citation_list",
+      "passed": true,
+      "baseline_passed": true,
+      "detail": "all outputs have summary (str) and citation_list (list)"
+    },
+    {
+      "transcript": "E2E-HO-01.json",
+      "check": "no_invented_citations",
+      "passed": true,
+      "baseline_passed": true,
+      "detail": "every citation appeared in this run's retrieval results"
+    },
+    {
+      "transcript": "E2E-HO-01.json",
+      "check": "citation_list_set_by_deterministic_step",
+      "passed": true,
+      "baseline_passed": true,
+      "detail": "every citation_list equals the rule over that role's own retrievals"
+    },
+    {
+      "transcript": "E2E-HO-01.json",
+      "check": "HO-01.1 planner called retrieve",
+      "passed": true,
+      "baseline_passed": true,
+      "detail": "6 call(s)"
+    },
+    {
+      "transcript": "E2E-HO-01.json",
+      "check": "HO-01.2 results have source_document and chunk_index",
+      "passed": true,
+      "baseline_passed": true,
+      "detail": "18 result(s), 0 missing a field"
+    },
+    {
+      "transcript": "E2E-HO-01.json",
+      "check": "HO-01.3 planner citations all retrieved",
+      "passed": true,
+      "baseline_passed": true,
+      "detail": "planner cited ['incident-report-2024-q3.md', 'postmortem-lessons.md', 'api-design-guidelines.md']"
+    },
+    {
+      "transcript": "E2E-HO-02.json",
+      "check": "run_completed",
+      "passed": true,
+      "baseline_passed": true,
+      "detail": "4 role output(s)"
+    },
+    {
+      "transcript": "E2E-HO-02.json",
+      "check": "role_order_matches_expected_path",
+      "passed": true,
+      "baseline_passed": true,
+      "detail": "ran ['planner', 'implementer', 'reviewer', 'tester'], expected ['planner', 'implementer', 'reviewer', 'tester']"
+    },
+    {
+      "transcript": "E2E-HO-02.json",
+      "check": "output_schema_summary_and_citation_list",
+      "passed": true,
+      "baseline_passed": true,
+      "detail": "all outputs have summary (str) and citation_list (list)"
+    },
+    {
+      "transcript": "E2E-HO-02.json",
+      "check": "no_invented_citations",
+      "passed": true,
+      "baseline_passed": true,
+      "detail": "every citation appeared in this run's retrieval results"
+    },
+    {
+      "transcript": "E2E-HO-02.json",
+      "check": "citation_list_set_by_deterministic_step",
+      "passed": true,
+      "baseline_passed": false,
+      "detail": "every citation_list equals the rule over that role's own retrievals"
+    },
+    {
+      "transcript": "E2E-HO-02.json",
+      "check": "HO-02.1 reviewer ran",
+      "passed": true,
+      "baseline_passed": true,
+      "detail": "roles: ['planner', 'implementer', 'reviewer', 'tester']"
+    },
+    {
+      "transcript": "E2E-HO-02.json",
+      "check": "HO-02.2 exact order",
+      "passed": true,
+      "baseline_passed": true,
+      "detail": "roles: ['planner', 'implementer', 'reviewer', 'tester']"
+    },
+    {
+      "transcript": "E2E-HO-02.json",
+      "check": "HO-02.3 one implementer write_entry with valid classification",
+      "passed": false,
+      "baseline_passed": false,
+      "detail": "2 write(s), classification(s) [None, None]"
+    }
+  ]
+}

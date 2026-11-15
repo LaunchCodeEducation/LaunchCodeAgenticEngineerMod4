@@ -1,0 +1,75 @@
+{
+  "regressions": 0,
+  "results": [
+    {
+      "transcript": "E2E-LAB-delete.json",
+      "check": "run_completed",
+      "passed": true,
+      "baseline_passed": null,
+      "detail": "4 role output(s)"
+    },
+    {
+      "transcript": "E2E-LAB-delete.json",
+      "check": "role_order_matches_expected_path",
+      "passed": true,
+      "baseline_passed": null,
+      "detail": "ran ['planner', 'implementer', 'reviewer', 'tester'], expected ['planner', 'implementer', 'reviewer', 'tester']"
+    },
+    {
+      "transcript": "E2E-LAB-delete.json",
+      "check": "output_schema_summary_and_citation_list",
+      "passed": true,
+      "baseline_passed": null,
+      "detail": "all outputs have summary (str) and citation_list (list)"
+    },
+    {
+      "transcript": "E2E-LAB-delete.json",
+      "check": "no_invented_citations",
+      "passed": true,
+      "baseline_passed": null,
+      "detail": "every citation appeared in this run's retrieval results"
+    },
+    {
+      "transcript": "E2E-LAB-delete.json",
+      "check": "citation_list_set_by_deterministic_step",
+      "passed": true,
+      "baseline_passed": null,
+      "detail": "every citation_list equals the rule over that role's own retrievals"
+    },
+    {
+      "transcript": "E2E-REGRESSION-default.json",
+      "check": "run_completed",
+      "passed": true,
+      "baseline_passed": true,
+      "detail": "4 role output(s)"
+    },
+    {
+      "transcript": "E2E-REGRESSION-default.json",
+      "check": "role_order_matches_expected_path",
+      "passed": true,
+      "baseline_passed": true,
+      "detail": "ran ['planner', 'implementer', 'reviewer', 'tester'], expected ['planner', 'implementer', 'reviewer', 'tester']"
+    },
+    {
+      "transcript": "E2E-REGRESSION-default.json",
+      "check": "output_schema_summary_and_citation_list",
+      "passed": true,
+      "baseline_passed": true,
+      "detail": "all outputs have summary (str) and citation_list (list)"
+    },
+    {
+      "transcript": "E2E-REGRESSION-default.json",
+      "check": "no_invented_citations",
+      "passed": true,
+      "baseline_passed": false,
+      "detail": "every citation appeared in this run's retrieval results"
+    },
+    {
+      "transcript": "E2E-REGRESSION-default.json",
+      "check": "citation_list_set_by_deterministic_step",
+      "passed": true,
+      "baseline_passed": false,
+      "detail": "every citation_list equals the rule over that role's own retrievals"
+    }
+  ]
+}
